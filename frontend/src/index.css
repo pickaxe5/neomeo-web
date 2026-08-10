@@ -1,0 +1,157 @@
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --bg-soft: #f7f6f9;
+  --border: #e5e4e7;
+  --card-bg: #fff;
+  --accent: #8b3bff;
+  --accent-2: #d63bd6;
+  --accent-bg: rgba(139, 59, 255, 0.1);
+  --accent-border: rgba(139, 59, 255, 0.45);
+  --danger: #d1273d;
+  --danger-bg: rgba(209, 39, 61, 0.1);
+  --ok: #1a8a4a;
+  --ok-bg: rgba(26, 138, 74, 0.1);
+  --shadow: rgba(20, 10, 40, 0.06) 0 2px 8px -2px;
+  --shadow-lg: rgba(20, 10, 40, 0.12) 0 12px 24px -8px;
+
+  --sans: "Pretendard Variable", "Apple SD Gothic Neo", system-ui, "Segoe UI", Roboto,
+    "Malgun Gothic", sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  font: 16px/155% var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #a1a1ab;
+    --text-h: #f5f4f7;
+    --bg: #121218;
+    --bg-soft: #1a1a22;
+    --border: #2c2c36;
+    --card-bg: #1a1a22;
+    --accent: #b57bff;
+    --accent-2: #ea7bea;
+    --accent-bg: rgba(181, 123, 255, 0.16);
+    --accent-border: rgba(181, 123, 255, 0.5);
+    --danger: #f26a7a;
+    --danger-bg: rgba(242, 106, 122, 0.15);
+    --ok: #4ade80;
+    --ok-bg: rgba(74, 222, 128, 0.15);
+    --shadow: rgba(0, 0, 0, 0.35) 0 2px 8px -2px;
+    --shadow-lg: rgba(0, 0, 0, 0.45) 0 12px 24px -8px;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-soft);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--sans);
+  font-weight: 700;
+  color: var(--text-h);
+  margin: 0 0 8px;
+  letter-spacing: -0.3px;
+}
+
+h1 {
+  font-size: 26px;
+}
+h2 {
+  font-size: 18px;
+}
+h3 {
+  font-size: 15px;
+}
+p {
+  margin: 0 0 8px;
+}
+a {
+  color: var(--accent);
+}
+code {
+  font-family: var(--mono);
+  background: var(--bg-soft);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.9em;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-h);
+  font-weight: 500;
+  border-radius: 10px;
+  padding: 9px 16px;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease,
+    box-shadow 0.15s ease;
+}
+button:hover:not(:disabled) {
+  border-color: var(--accent-border);
+}
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+button.primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 4px 14px -4px var(--accent-border);
+}
+button.primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+input,
+select,
+textarea {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 12px;
+  background: var(--bg);
+  color: var(--text-h);
+  width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
