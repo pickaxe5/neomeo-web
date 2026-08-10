@@ -1,0 +1,46 @@
+databases:
+  - name: neomeo-db
+    plan: free
+    databaseName: neomeo
+    user: neomeo
+
+services:
+  - type: web
+    name: neomeo-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    # dockerCommand를 따로 지정하지 않음 — Dockerfile의 CMD(["sh", "start.sh"])가 그대로 쓰인다.
+    # Render가 dockerCommand의 공백을 따옴표 무시하고 나눠버려 "sh -c \"...\"" 형태가 깨졌던 문제 회피.
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: neomeo-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "60"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "14"
+      # GitHub OAuth App 발급 후 Render 대시보드에서 직접 채워주세요 (sync: false = 대시보드 수동 입력).
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      # Render가 배포 URL을 확정한 뒤, 그 값 + "/auth/github/callback"으로 대시보드에서 갱신하세요.
+      - key: GITHUB_OAUTH_CALLBACK_URL
+        sync: false
+      - key: DEMO_ACCOUNT_EMAIL
+        value: demo@neomeo.dev
+      - key: DEMO_ACCOUNT_PASSWORD
+        generateValue: true
+      # 프론트 배포 URL이 정해지면 Render 대시보드에서 갱신하세요 (CORS 허용 origin).
+      - key: FRONTEND_BASE_URL
+        sync: false
+      - key: POLL_INTERVAL_MINUTES
+        value: "10"
