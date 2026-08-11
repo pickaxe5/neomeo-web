@@ -6,10 +6,18 @@ import { createProject } from "../api/projects";
 import type { MyProjectOut, MyTeamOut } from "../types/api";
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
 
+const INTRO_DISMISSED_KEY = "neomeo_dashboard_intro_dismissed";
+
 export function DashboardPage() {
   const [teams, setTeams] = useState<MyTeamOut[] | null>(null);
   const [projects, setProjects] = useState<MyProjectOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showIntro, setShowIntro] = useState(() => localStorage.getItem(INTRO_DISMISSED_KEY) !== "1");
+
+  function dismissIntro() {
+    localStorage.setItem(INTRO_DISMISSED_KEY, "1");
+    setShowIntro(false);
+  }
 
   const [showTeamForm, setShowTeamForm] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -62,6 +70,25 @@ export function DashboardPage() {
   return (
     <div className="page">
       <h1>대시보드</h1>
+
+      {showIntro && (
+        <div className="intro-banner">
+          <span className="intro-banner-icon">i</span>
+          <div className="intro-banner-body">
+            <strong>처음이신가요?</strong>
+            <p>
+              아래 "내 프로젝트"에서 프로젝트를 클릭하면 상세 화면으로 들어갑니다. 거기서
+              <strong> 타임라인</strong>(팀별 업무 종료 카드), <strong>브리핑</strong>(내가 답해야 할 질문),{" "}
+              <strong>설정</strong>(GitHub 연동·팀 관리)을 확인할 수 있어요. 프로젝트가 아직 없다면
+              "내 팀"에서 팀을 먼저 만들거나, 로그인 화면의 데모 계정으로 예시 데이터를 체험해보세요.
+            </p>
+          </div>
+          <button className="intro-banner-close" onClick={dismissIntro} aria-label="안내 닫기">
+            ×
+          </button>
+        </div>
+      )}
+
       <ErrorBanner message={error} />
 
       <section>
@@ -102,15 +129,21 @@ export function DashboardPage() {
         ) : projects.length === 0 ? (
           <div className="empty-state">아직 참여 중인 프로젝트가 없습니다.</div>
         ) : (
-          <div className="card-list">
+          <div className="list-panel">
             {projects.map((p) => (
-              <Link key={p.id} to={`/projects/${p.id}`} className="card-link">
-                <div className="card">
-                  <div className="row">
-                    <h3>{p.name}</h3>
-                    {p.repo_full_name && <span className="badge">{p.repo_full_name}</span>}
-                  </div>
-                </div>
+              <Link key={p.id} to={`/projects/${p.id}`} className="list-row">
+                <span className="list-row-icon">{p.name.slice(0, 1)}</span>
+                <span className="list-row-main">
+                  <span className="name">{p.name}</span>
+                  {p.repo_full_name && <span className="sub">{p.repo_full_name}</span>}
+                </span>
+                <span className="list-row-end">
+                  {p.repo_full_name ? (
+                    <span className="badge ok">GitHub 연결</span>
+                  ) : (
+                    <span className="badge muted">미연결</span>
+                  )}
+                </span>
               </Link>
             ))}
           </div>
@@ -157,18 +190,21 @@ export function DashboardPage() {
         ) : teams.length === 0 ? (
           <div className="empty-state">아직 소속된 팀이 없습니다.</div>
         ) : (
-          <div className="card-list">
+          <div className="list-panel">
             {teams.map((t) => (
-              <Link key={t.id} to={`/teams/${t.id}`} className="card-link">
-                <div className="card">
-                  <div className="row">
-                    <h3>{t.name}</h3>
-                    <span className="badge">{t.role === "leader" ? "리더" : "멤버"}</span>
-                  </div>
-                  <p style={{ fontSize: 13 }}>
+              <Link key={t.id} to={`/teams/${t.id}`} className="list-row">
+                <span className="list-row-icon">{t.name.slice(0, 1)}</span>
+                <span className="list-row-main">
+                  <span className="name">{t.name}</span>
+                  <span className="sub">
                     {t.timezone} · {t.work_start}–{t.work_end}
-                  </p>
-                </div>
+                  </span>
+                </span>
+                <span className="list-row-end">
+                  <span className={`badge ${t.role === "leader" ? "accent" : "muted"}`}>
+                    {t.role === "leader" ? "리더" : "멤버"}
+                  </span>
+                </span>
               </Link>
             ))}
           </div>

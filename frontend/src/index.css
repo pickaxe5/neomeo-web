@@ -1,26 +1,34 @@
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --bg-soft: #f7f6f9;
-  --border: #e5e4e7;
+  --text: #5c6470;
+  --text-dim: #8891a0;
+  --text-h: #14171f;
+  --bg: #f4f6f8;
+  --bg-soft: #eaedf1;
+  --border: #dde1e6;
   --card-bg: #fff;
-  --accent: #8b3bff;
-  --accent-2: #d63bd6;
-  --accent-bg: rgba(139, 59, 255, 0.1);
-  --accent-border: rgba(139, 59, 255, 0.45);
+  --accent: #1d63ed;
+  --accent-2: #0db7ed;
+  --accent-bg: rgba(29, 99, 237, 0.08);
+  --accent-border: rgba(29, 99, 237, 0.4);
   --danger: #d1273d;
-  --danger-bg: rgba(209, 39, 61, 0.1);
+  --danger-bg: rgba(209, 39, 61, 0.09);
   --ok: #1a8a4a;
-  --ok-bg: rgba(26, 138, 74, 0.1);
-  --shadow: rgba(20, 10, 40, 0.06) 0 2px 8px -2px;
-  --shadow-lg: rgba(20, 10, 40, 0.12) 0 12px 24px -8px;
+  --ok-bg: rgba(26, 138, 74, 0.09);
+  --warn: #b5760a;
+  --warn-bg: rgba(181, 118, 10, 0.09);
+  --shadow: rgba(20, 23, 31, 0.05) 0 1px 3px 0;
+
+  --sidebar-bg: #10151f;
+  --sidebar-bg-active: #1a2130;
+  --sidebar-text: #99a3b5;
+  --sidebar-text-h: #f2f4f7;
+  --sidebar-border: #232a38;
 
   --sans: "Pretendard Variable", "Apple SD Gothic Neo", system-ui, "Segoe UI", Roboto,
     "Malgun Gothic", sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
 
-  font: 16px/155% var(--sans);
+  font: 15px/150% var(--sans);
   color-scheme: light dark;
   color: var(--text);
   background: var(--bg);
@@ -31,23 +39,31 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --text: #a1a1ab;
-    --text-h: #f5f4f7;
-    --bg: #121218;
-    --bg-soft: #1a1a22;
-    --border: #2c2c36;
-    --card-bg: #1a1a22;
-    --accent: #b57bff;
-    --accent-2: #ea7bea;
-    --accent-bg: rgba(181, 123, 255, 0.16);
-    --accent-border: rgba(181, 123, 255, 0.5);
+  :root:not([data-theme="light"]) {
+    --text: #9aa2b1;
+    --text-dim: #6b7383;
+    --text-h: #eef0f4;
+    --bg: #0d1017;
+    --bg-soft: #151a24;
+    --border: #232a38;
+    --card-bg: #151a24;
+    --accent: #4c8dff;
+    --accent-2: #3fd4f2;
+    --accent-bg: rgba(76, 141, 255, 0.14);
+    --accent-border: rgba(76, 141, 255, 0.4);
     --danger: #f26a7a;
-    --danger-bg: rgba(242, 106, 122, 0.15);
+    --danger-bg: rgba(242, 106, 122, 0.14);
     --ok: #4ade80;
-    --ok-bg: rgba(74, 222, 128, 0.15);
-    --shadow: rgba(0, 0, 0, 0.35) 0 2px 8px -2px;
-    --shadow-lg: rgba(0, 0, 0, 0.45) 0 12px 24px -8px;
+    --ok-bg: rgba(74, 222, 128, 0.14);
+    --warn: #e3ac3f;
+    --warn-bg: rgba(227, 172, 63, 0.14);
+    --shadow: rgba(0, 0, 0, 0.3) 0 1px 3px 0;
+
+    --sidebar-bg: #0a0d13;
+    --sidebar-bg-active: #161c28;
+    --sidebar-text: #838da0;
+    --sidebar-text-h: #f2f4f7;
+    --sidebar-border: #1c2230;
   }
 }
 
@@ -57,27 +73,27 @@
 
 body {
   margin: 0;
-  background: var(--bg-soft);
+  background: var(--bg);
 }
 
 h1,
 h2,
 h3 {
   font-family: var(--sans);
-  font-weight: 700;
+  font-weight: 650;
   color: var(--text-h);
-  margin: 0 0 8px;
-  letter-spacing: -0.3px;
+  margin: 0 0 6px;
+  letter-spacing: -0.2px;
 }
 
 h1 {
-  font-size: 26px;
+  font-size: 22px;
 }
 h2 {
-  font-size: 18px;
+  font-size: 16px;
 }
 h3 {
-  font-size: 15px;
+  font-size: 14px;
 }
 p {
   margin: 0 0 8px;
@@ -106,47 +122,44 @@ button {
   background: var(--card-bg);
   color: var(--text-h);
   font-weight: 500;
-  border-radius: 10px;
-  padding: 9px 16px;
-  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease,
-    box-shadow 0.15s ease;
+  font-size: 13.5px;
+  border-radius: 6px;
+  padding: 7px 13px;
+  transition: border-color 0.12s ease, background 0.12s ease, filter 0.12s ease;
 }
 button:hover:not(:disabled) {
   border-color: var(--accent-border);
-}
-button:active:not(:disabled) {
-  transform: translateY(1px);
 }
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 button.primary {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  border-color: transparent;
+  background: var(--accent);
+  border-color: var(--accent);
   color: #fff;
-  box-shadow: 0 4px 14px -4px var(--accent-border);
 }
 button.primary:hover:not(:disabled) {
-  filter: brightness(1.06);
+  filter: brightness(1.08);
 }
 
 input,
 select,
 textarea {
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 9px 12px;
-  background: var(--bg);
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: var(--card-bg);
   color: var(--text-h);
   width: 100%;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-size: 13.5px;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
 input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--accent-border);
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
 

@@ -38,13 +38,21 @@ npm run dev
 
 ### 3. 환경 변수
 
-`frontend/.env` (없으면 `.env.example` 복사):
+`frontend/.env` (없으면 `.env.example` 복사) — **로컬 개발용**, `npm run dev`에서 사용:
 
 ```
 VITE_API_BASE_URL=http://localhost:8000
 ```
 
 backend를 다른 호스트/포트에서 띄운 경우 이 값을 그에 맞게 바꾸면 됩니다.
+
+`frontend/.env.production` — **프로덕션 빌드용**, `npm run build`에서 사용. Render에 배포된 backend를 가리킴:
+
+```
+VITE_API_BASE_URL=https://neomeo-backend.onrender.com
+```
+
+`.env*` 파일은 전부 gitignore 대상이라 git에는 올라가지 않습니다. 새로 클론한 사람은 위 두 파일을 각각 만들어야 합니다. Render backend의 `FRONTEND_BASE_URL`(CORS 허용 origin)도 실제 프론트 배포 주소와 반드시 일치시켜야 합니다.
 
 ## 사용 방법
 

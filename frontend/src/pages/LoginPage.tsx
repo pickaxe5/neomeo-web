@@ -59,18 +59,30 @@ export function LoginPage() {
       </p>
 
       <div className="card stack">
-        <a href={githubLoginUrl()}>
-          <button className="primary" style={{ width: "100%" }}>
-            GitHub로 로그인
+        <div>
+          <a href={githubLoginUrl()}>
+            <button className="primary" style={{ width: "100%" }}>
+              GitHub로 로그인
+            </button>
+          </a>
+          <p className="hint">실제 팀·저장소로 시작합니다. GitHub 계정 인증이 필요해요.</p>
+        </div>
+        <div>
+          <button onClick={handleDemoLogin} disabled={busy} style={{ width: "100%" }}>
+            데모 계정으로 체험하기
           </button>
-        </a>
-        <button onClick={handleDemoLogin} disabled={busy} style={{ width: "100%" }}>
-          데모 계정으로 체험하기
-        </button>
+          <p className="hint">
+            가입 없이 바로 둘러보고 싶다면 이 버튼을 누르세요. 서울·베를린·샌프란시스코 3개 팀으로
+            구성된 예시 프로젝트가 자동 생성되고 곧바로 로그인됩니다.
+          </p>
+        </div>
       </div>
 
       <div className="card">
         <h3>이메일로 로그인</h3>
+        <p className="hint" style={{ marginBottom: 12 }}>
+          이미 계정이 있는 경우에만 사용하세요. 신규 가입은 아직 지원하지 않습니다.
+        </p>
         <ErrorBanner message={error} />
         <form onSubmit={handlePasswordLogin} className="stack">
           <div className="field">
