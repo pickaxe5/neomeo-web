@@ -289,6 +289,44 @@
   border: none;
 }
 
+.danger-zone {
+  border-color: var(--danger);
+}
+.danger-zone h2 {
+  color: var(--danger);
+}
+.danger-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.danger-row:first-of-type {
+  border-top: none;
+  padding-top: 4px;
+}
+.danger-row strong {
+  display: block;
+  font-size: 13.5px;
+  color: var(--text-h);
+  margin-bottom: 2px;
+}
+.danger-row p {
+  font-size: 12.5px;
+  color: var(--text-dim);
+  margin: 0;
+}
+button.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  flex-shrink: 0;
+}
+button.danger:hover:not(:disabled) {
+  background: var(--danger-bg);
+}
+
 /* Status dot badges (Docker-style) */
 .badge {
   display: inline-flex;

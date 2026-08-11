@@ -1,16 +1,29 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { fetchTeam, updateTeam, createInviteLink } from "../api/teams";
-import type { TeamOut } from "../types/api";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  fetchTeam,
+  updateTeam,
+  createInviteLink,
+  deleteTeam,
+  leaveTeam,
+  fetchTeamMembers,
+} from "../api/teams";
+import { fetchMyTeams } from "../api/me";
+import type { TeamOut, TeamRole, TeamMemberOut } from "../types/api";
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
 
 export function TeamPage() {
   const { teamId } = useParams<{ teamId: string }>();
+  const navigate = useNavigate();
   const [team, setTeam] = useState<TeamOut | null>(null);
+  const [myRole, setMyRole] = useState<TeamRole | null>(null);
+  const [members, setMembers] = useState<TeamMemberOut[] | null>(null);
+  const [membersUnavailable, setMembersUnavailable] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<TeamOut>>({});
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!teamId) return;
@@ -20,6 +33,13 @@ export function TeamPage() {
         setForm(t);
       })
       .catch((err) => setError(errorMessage(err)));
+    fetchMyTeams()
+      .then((teams) => setMyRole(teams.find((t) => t.id === teamId)?.role ?? null))
+      .catch(() => {});
+    // 백엔드 미구현 상태라 실패가 정상 — 구현되기 전까지는 안내 문구를 대신 보여준다.
+    fetchTeamMembers(teamId)
+      .then(setMembers)
+      .catch(() => setMembersUnavailable(true));
   }, [teamId]);
 
   async function handleSave(e: React.FormEvent) {
@@ -50,6 +70,34 @@ export function TeamPage() {
       setInviteUrl(`${window.location.origin}/invite/${invite.token}`);
     } catch (err) {
       setError(errorMessage(err));
+    }
+  }
+
+  async function handleLeave() {
+    if (!teamId || !team) return;
+    if (!window.confirm(`"${team.name}" 팀에서 나가시겠습니까?`)) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await leaveTeam(teamId);
+      navigate("/");
+    } catch (err) {
+      setError(errorMessage(err));
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!teamId || !team) return;
+    if (!window.confirm(`"${team.name}" 팀을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await deleteTeam(teamId);
+      navigate("/");
+    } catch (err) {
+      setError(errorMessage(err));
+      setBusy(false);
     }
   }
 
@@ -143,6 +191,37 @@ export function TeamPage() {
       </div>
 
       <div className="card">
+        <h2>팀원</h2>
+        {members === null && !membersUnavailable && <div className="spinner">불러오는 중...</div>}
+        {membersUnavailable && (
+          <p className="quick-action-meta">팀원 목록 기능은 아직 준비 중입니다.</p>
+        )}
+        {members && members.length === 0 && (
+          <p className="quick-action-meta">아직 팀원이 없습니다.</p>
+        )}
+        {members && members.length > 0 && (
+          <div className="list-panel">
+            {members.map((m) => (
+              <div key={m.user_id} className="list-row" style={{ cursor: "default" }}>
+                <span className="list-row-icon">
+                  {(m.github_handle ?? m.name ?? "?").slice(0, 1).toUpperCase()}
+                </span>
+                <span className="list-row-main">
+                  <span className="name">{m.github_handle ? `@${m.github_handle}` : m.name ?? "이름 없음"}</span>
+                  {m.github_handle && m.name && <span className="sub">{m.name}</span>}
+                </span>
+                <span className="list-row-end">
+                  <span className={`badge ${m.role === "leader" ? "accent" : "muted"}`}>
+                    {m.role === "leader" ? "리더" : "멤버"}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="card">
         <h2>팀원 초대</h2>
         <p style={{ fontSize: 13 }}>초대 링크는 30일간 유효합니다. (리더만 생성 가능)</p>
         <button onClick={handleInvite}>초대 링크 생성</button>
@@ -152,6 +231,34 @@ export function TeamPage() {
           </div>
         )}
       </div>
+
+      {myRole && (
+        <div className="card danger-zone">
+          <h2>탈퇴 및 삭제</h2>
+          {myRole === "member" && (
+            <div className="danger-row">
+              <div>
+                <strong>팀 나가기</strong>
+                <p>이 팀에서 내 멤버십만 제거합니다. 다른 팀원에게는 영향이 없습니다.</p>
+              </div>
+              <button onClick={handleLeave} disabled={busy}>
+                나가기
+              </button>
+            </div>
+          )}
+          {myRole === "leader" && (
+            <div className="danger-row">
+              <div>
+                <strong>팀 삭제</strong>
+                <p>팀과 소속 멤버십을 모두 삭제합니다. 되돌릴 수 없습니다.</p>
+              </div>
+              <button className="danger" onClick={handleDelete} disabled={busy}>
+                삭제
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -93,65 +93,6 @@ export function DashboardPage() {
 
       <section>
         <div className="row">
-          <h2>내 프로젝트</h2>
-          <button onClick={() => setShowProjectForm((v) => !v)}>
-            {showProjectForm ? "취소" : "+ 새 프로젝트"}
-          </button>
-        </div>
-
-        {showProjectForm && (
-          <form onSubmit={handleCreateProject} className="card stack">
-            <div className="field">
-              <label>프로젝트 이름</label>
-              <input value={projectName} onChange={(e) => setProjectName(e.target.value)} required />
-            </div>
-            <div className="field">
-              <label>소속 팀</label>
-              <select value={projectTeamId} onChange={(e) => setProjectTeamId(e.target.value)} required>
-                <option value="" disabled>
-                  팀을 선택하세요
-                </option>
-                {teams?.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <button type="submit" className="primary">
-              생성
-            </button>
-          </form>
-        )}
-
-        {projects === null ? (
-          <div className="spinner">불러오는 중...</div>
-        ) : projects.length === 0 ? (
-          <div className="empty-state">아직 참여 중인 프로젝트가 없습니다.</div>
-        ) : (
-          <div className="list-panel">
-            {projects.map((p) => (
-              <Link key={p.id} to={`/projects/${p.id}`} className="list-row">
-                <span className="list-row-icon">{p.name.slice(0, 1)}</span>
-                <span className="list-row-main">
-                  <span className="name">{p.name}</span>
-                  {p.repo_full_name && <span className="sub">{p.repo_full_name}</span>}
-                </span>
-                <span className="list-row-end">
-                  {p.repo_full_name ? (
-                    <span className="badge ok">GitHub 연결</span>
-                  ) : (
-                    <span className="badge muted">미연결</span>
-                  )}
-                </span>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section style={{ marginTop: 32 }}>
-        <div className="row">
           <h2>내 팀</h2>
           <button onClick={() => setShowTeamForm((v) => !v)}>
             {showTeamForm ? "취소" : "+ 새 팀"}
@@ -204,6 +145,65 @@ export function DashboardPage() {
                   <span className={`badge ${t.role === "leader" ? "accent" : "muted"}`}>
                     {t.role === "leader" ? "리더" : "멤버"}
                   </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section style={{ marginTop: 32 }}>
+        <div className="row">
+          <h2>내 프로젝트</h2>
+          <button onClick={() => setShowProjectForm((v) => !v)}>
+            {showProjectForm ? "취소" : "+ 새 프로젝트"}
+          </button>
+        </div>
+
+        {showProjectForm && (
+          <form onSubmit={handleCreateProject} className="card stack">
+            <div className="field">
+              <label>프로젝트 이름</label>
+              <input value={projectName} onChange={(e) => setProjectName(e.target.value)} required />
+            </div>
+            <div className="field">
+              <label>소속 팀</label>
+              <select value={projectTeamId} onChange={(e) => setProjectTeamId(e.target.value)} required>
+                <option value="" disabled>
+                  팀을 선택하세요
+                </option>
+                {teams?.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button type="submit" className="primary">
+              생성
+            </button>
+          </form>
+        )}
+
+        {projects === null ? (
+          <div className="spinner">불러오는 중...</div>
+        ) : projects.length === 0 ? (
+          <div className="empty-state">아직 참여 중인 프로젝트가 없습니다.</div>
+        ) : (
+          <div className="list-panel">
+            {projects.map((p) => (
+              <Link key={p.id} to={`/projects/${p.id}`} className="list-row">
+                <span className="list-row-icon">{p.name.slice(0, 1)}</span>
+                <span className="list-row-main">
+                  <span className="name">{p.name}</span>
+                  {p.repo_full_name && <span className="sub">{p.repo_full_name}</span>}
+                </span>
+                <span className="list-row-end">
+                  {p.repo_full_name ? (
+                    <span className="badge ok">GitHub 연결</span>
+                  ) : (
+                    <span className="badge muted">미연결</span>
+                  )}
                 </span>
               </Link>
             ))}

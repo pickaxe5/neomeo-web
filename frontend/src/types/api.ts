@@ -61,6 +61,9 @@ export interface MyProjectOut {
   repo_full_name: string | null;
   repo_id: number | null;
   created_at: string;
+  // NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md.
+  // Missing/undefined is treated as "not an admin".
+  is_admin?: boolean;
 }
 
 export interface ProjectOut {
@@ -78,10 +81,26 @@ export interface ProjectCreate {
   team_id: string;
 }
 
+// NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md
+export interface ParticipatingTeamOut {
+  id: string;
+  name: string;
+  country: string | null;
+  timezone: string;
+}
+
 export interface ProjectDocumentOut {
   project_id: string;
   content: string;
   updated_at: string;
+}
+
+// NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md
+export interface TeamMemberOut {
+  user_id: string;
+  name: string | null;
+  github_handle: string | null;
+  role: TeamRole;
 }
 
 export interface InviteLinkOut {
@@ -107,6 +126,13 @@ export interface GithubStatusOut {
   connected: boolean;
   last_collected_at: string | null;
   last_error: string | null;
+}
+
+// NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md
+export interface GithubRepoOut {
+  full_name: string;
+  owner: string;
+  private: boolean;
 }
 
 export type CardStatus = "normal" | "no_change";

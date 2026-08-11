@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import type { ProjectOut, ProjectCreate, ProjectDocumentOut } from "../types/api";
+import type { ProjectOut, ProjectCreate, ProjectDocumentOut, ParticipatingTeamOut } from "../types/api";
 
 export function createProject(payload: ProjectCreate) {
   return apiRequest<ProjectOut>("/projects", { method: "POST", body: payload });
@@ -26,4 +26,20 @@ export function addParticipatingTeam(projectId: string, teamId: string) {
     method: "POST",
     body: { team_id: teamId },
   });
+}
+
+/**
+ * NOT YET IMPLEMENTED on the backend — 404s today.
+ * Requested contract: docs/frontend-to-backend-requests.md
+ */
+export function fetchParticipatingTeams(projectId: string) {
+  return apiRequest<ParticipatingTeamOut[]>(`/projects/${projectId}/teams`);
+}
+
+/**
+ * NOT YET IMPLEMENTED on the backend — 404s today.
+ * Requested contract: docs/frontend-to-backend-requests.md
+ */
+export function deleteProject(projectId: string) {
+  return apiRequest<void>(`/projects/${projectId}`, { method: "DELETE" });
 }
