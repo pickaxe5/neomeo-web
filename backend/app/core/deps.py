@@ -29,6 +29,20 @@ def get_current_user(
     return user
 
 
+def get_optional_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """get_current_user와 달리 토큰이 없거나 유효하지 않아도 401 대신 None을 반환한다.
+    비로그인 조회도 허용하는 엔드포인트에서 로그인 시에만 추가 정보(예: is_admin)를 채울 때 사용."""
+    if credentials is None:
+        return None
+    user_id = decode_token(credentials.credentials, expected_type="access")
+    if user_id is None:
+        return None
+    return db.get(User, user_id)
+
+
 def uuid_or_400(value: str) -> uuid.UUID:
     try:
         return uuid.UUID(value)
