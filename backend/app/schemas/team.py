@@ -3,7 +3,7 @@ from datetime import datetime, time
 
 from pydantic import BaseModel
 
-from app.models.team import TeamRole
+from app.models.team import JobRole, TeamRole
 
 
 class TeamCreate(BaseModel):
@@ -44,6 +44,19 @@ class TeamMemberOut(BaseModel):
     name: str | None
     github_handle: str | None
     role: TeamRole
+    # 기능명세서 4.2: 역할·담당 영역. assigned_area_confirmed=False면 assigned_paths는
+    # 저장소 활동 기반 추정치이지 확정값이 아니다 (조회 시점마다 최신 활동으로 다시 계산됨).
+    job_role: JobRole | None = None
+    assigned_area: str | None = None
+    assigned_paths: list[str] | None = None
+    assigned_area_confirmed: bool = False
+
+
+class MyAssignmentUpdate(BaseModel):
+    """기능명세서 4.2: 본인이 역할·담당 영역을 직접 입력하면, 이후 자동 추론이 덮어쓰지 않는다."""
+
+    job_role: JobRole | None = None
+    assigned_area: str | None = None
 
 
 class InviteLinkOut(BaseModel):

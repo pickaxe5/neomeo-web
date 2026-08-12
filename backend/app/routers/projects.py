@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, get_optional_user, require_project_admin
+from app.core.i18n import get_lang, t
 from app.models.closure import ClosureRun
 from app.models.github_event import RawEvent
 from app.models.project import Project, ProjectAdmin, ProjectDocument, ProjectTeam
@@ -27,12 +28,13 @@ def create_project(
     payload: ProjectCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
 ) -> Project:
     """O-003: 프로젝트 생성 및 레포 선택. 생성자의 팀이 첫 참여 팀이 되고,
     생성자는 프로젝트 관리자가 된다."""
     team = db.get(Team, payload.team_id)
     if team is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "팀을 찾을 수 없습니다.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("team_not_found", lang))
 
     project = Project(
         name=payload.name,
@@ -54,10 +56,11 @@ def get_project(
     project_id: str,
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_optional_user),
+    lang: str = Depends(get_lang),
 ) -> ProjectOut:
     project = db.get(Project, project_id)
     if project is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
 
     is_admin = False
     if current_user is not None:
@@ -83,13 +86,14 @@ def update_project(
     payload: ProjectUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
 ) -> Project:
     """C-003: 프로젝트 설정 수정 (이름). 레포 변경은 실제 접근 권한 재검증이 필요하므로
     이 엔드포인트가 아니라 /github/connect를 통해서만 한다."""
     project = db.get(Project, project_id)
     if project is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
-    require_project_admin(db, project_id, current_user)
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
+    require_project_admin(db, project_id, current_user, lang)
 
     project.name = payload.name
     db.commit()
@@ -103,10 +107,11 @@ def upsert_project_document(
     payload: ProjectDocumentIn,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
 ) -> ProjectDocument:
     """O-004: 기획안·정리 문서를 텍스트로 저장해 AI 컨텍스트로 사용한다. 별도 분석 없음."""
     if db.get(Project, project_id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
 
     doc = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).first()
     if doc is None:
@@ -125,13 +130,14 @@ def add_participating_team(
     payload: AddParticipatingTeamRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
 ) -> None:
     """O-006: 프로젝트 관리자가 다른 팀을 참여 팀으로 추가한다 (Border 04 대응)."""
     if db.get(Project, project_id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
     if db.get(Team, payload.team_id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "팀을 찾을 수 없습니다.")
-    require_project_admin(db, project_id, current_user)
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("team_not_found", lang))
+    require_project_admin(db, project_id, current_user, lang)
 
     exists = (
         db.query(ProjectTeam)
@@ -145,10 +151,12 @@ def add_participating_team(
 
 
 @router.get("/{project_id}/teams", response_model=list[TeamOut])
-def list_participating_teams(project_id: str, db: Session = Depends(get_db)) -> list[Team]:
+def list_participating_teams(
+    project_id: str, db: Session = Depends(get_db), lang: str = Depends(get_lang)
+) -> list[Team]:
     """docs/frontend-to-backend-requests.md #6: 이 프로젝트에 참여 중인 팀 목록."""
     if db.get(Project, project_id) is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
 
     return (
         db.query(Team)
@@ -163,13 +171,14 @@ def delete_project(
     project_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
 ) -> None:
     """docs/frontend-to-backend-requests.md #3: 프로젝트 관리자만 가능. project_teams·
     project_admins·project_documents·closure_runs/summary_cards·raw_events까지 모두 cascade 삭제."""
     project = db.get(Project, project_id)
     if project is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
-    require_project_admin(db, project_id, current_user)
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
+    require_project_admin(db, project_id, current_user, lang)
 
     closure_run_ids = [
         row[0] for row in db.query(ClosureRun.id).filter(ClosureRun.project_id == project_id).all()

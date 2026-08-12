@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_team_leader
+from app.core.i18n import get_lang, t
 from app.models.closure import ClosureRun, ClosureTrigger
 from app.models.github_event import RawEvent
 from app.models.project import Project
@@ -68,15 +69,16 @@ def trigger_manual_closure(
     language: str = "ko",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
 ) -> TimelineCardOut:
     """S-002: 야근·조기 작업 시 팀장이 추가 작업 마감을 버튼으로 실행한다. 하루 여러 번 가능."""
     project = db.get(Project, project_id)
     if project is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
     team = db.get(Team, payload.team_id)
     if team is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "팀을 찾을 수 없습니다.")
-    require_team_leader(db, payload.team_id, current_user)
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("team_not_found", lang))
+    require_team_leader(db, payload.team_id, current_user, lang)
 
     closure_run = run_closure(db, project, team, ClosureTrigger.MANUAL)
 
@@ -86,7 +88,7 @@ def trigger_manual_closure(
         .first()
     )
     if card is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, f"'{language}' 언어 카드가 없습니다.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("language_card_not_found", lang, language=language))
 
     return TimelineCardOut(
         closure_run_id=closure_run.id,
