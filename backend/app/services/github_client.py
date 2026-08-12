@@ -34,6 +34,27 @@ def get_repo(client: httpx.Client, token: str, full_name: str) -> dict:
     return _get(client, token, f"/repos/{full_name}").json()
 
 
+def list_user_repos(client: httpx.Client, token: str) -> list[dict]:
+    """docs/frontend-to-backend-requests.md #1: 사용자 본인 + 소속 organization의 레포 전체 목록.
+    페이지네이션 끝까지 순회한다 (최대 100개/페이지)."""
+    results: list[dict] = []
+    page = 1
+    while True:
+        items = _get(
+            client,
+            token,
+            "/user/repos",
+            {"affiliation": "owner,organization_member", "per_page": 100, "page": page},
+        ).json()
+        if not items:
+            break
+        results.extend(items)
+        if len(items) < 100:
+            break
+        page += 1
+    return results
+
+
 def _paginate_until_before(
     client: httpx.Client, token: str, path: str, params: dict, since: datetime, updated_at_key: str = "updated_at"
 ) -> list[dict]:

@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_optional_user
+from app.models.closure import ClosureRun
+from app.models.github_event import RawEvent
 from app.models.project import Project, ProjectAdmin, ProjectDocument, ProjectTeam
+from app.models.summary import SummaryCard
 from app.models.team import Team
 from app.models.user import User
 from app.schemas.project import (
@@ -14,6 +17,7 @@ from app.schemas.project import (
     ProjectOut,
     ProjectUpdate,
 )
+from app.schemas.team import TeamOut
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -56,11 +60,31 @@ def create_project(
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
-def get_project(project_id: str, db: Session = Depends(get_db)) -> Project:
+def get_project(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_user),
+) -> ProjectOut:
     project = db.get(Project, project_id)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
-    return project
+
+    is_admin = False
+    if current_user is not None:
+        is_admin = (
+            db.query(ProjectAdmin)
+            .filter(ProjectAdmin.project_id == project_id, ProjectAdmin.user_id == current_user.id)
+            .first()
+            is not None
+        )
+    return ProjectOut(
+        id=project.id,
+        name=project.name,
+        repo_full_name=project.repo_full_name,
+        repo_id=project.repo_id,
+        created_at=project.created_at,
+        is_admin=is_admin,
+    )
 
 
 @router.patch("/{project_id}", response_model=ProjectOut)
@@ -127,4 +151,50 @@ def add_participating_team(
     if exists is None:
         db.add(ProjectTeam(project_id=project_id, team_id=payload.team_id))
         db.commit()
+    return None
+
+
+@router.get("/{project_id}/teams", response_model=list[TeamOut])
+def list_participating_teams(project_id: str, db: Session = Depends(get_db)) -> list[Team]:
+    """docs/frontend-to-backend-requests.md #6: 이 프로젝트에 참여 중인 팀 목록."""
+    if db.get(Project, project_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
+
+    return (
+        db.query(Team)
+        .join(ProjectTeam, ProjectTeam.team_id == Team.id)
+        .filter(ProjectTeam.project_id == project_id)
+        .all()
+    )
+
+
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """docs/frontend-to-backend-requests.md #3: 프로젝트 관리자만 가능. project_teams·
+    project_admins·project_documents·closure_runs/summary_cards·raw_events까지 모두 cascade 삭제."""
+    project = db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
+    _require_project_admin(db, project_id, current_user)
+
+    closure_run_ids = [
+        row[0] for row in db.query(ClosureRun.id).filter(ClosureRun.project_id == project_id).all()
+    ]
+    if closure_run_ids:
+        db.query(SummaryCard).filter(SummaryCard.closure_run_id.in_(closure_run_ids)).delete(
+            synchronize_session=False
+        )
+        db.query(ClosureRun).filter(ClosureRun.project_id == project_id).delete(synchronize_session=False)
+
+    db.query(RawEvent).filter(RawEvent.project_id == project_id).delete(synchronize_session=False)
+    db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).delete(synchronize_session=False)
+    db.query(ProjectAdmin).filter(ProjectAdmin.project_id == project_id).delete(synchronize_session=False)
+    db.query(ProjectTeam).filter(ProjectTeam.project_id == project_id).delete(synchronize_session=False)
+
+    db.delete(project)
+    db.commit()
     return None

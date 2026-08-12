@@ -3,6 +3,8 @@ from datetime import datetime, time
 
 from pydantic import BaseModel
 
+from app.models.team import TeamRole
+
 
 class TeamCreate(BaseModel):
     name: str
@@ -33,6 +35,15 @@ class TeamOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TeamMemberOut(BaseModel):
+    """docs/frontend-to-backend-requests.md #5: 팀원 목록. 이름 대신 GitHub 닉네임으로 표시."""
+
+    user_id: uuid.UUID
+    name: str | None
+    github_handle: str | None
+    role: TeamRole
 
 
 class InviteLinkOut(BaseModel):

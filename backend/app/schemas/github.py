@@ -22,3 +22,11 @@ class GithubStatusOut(BaseModel):
     connected: bool
     last_collected_at: datetime | None
     last_error: str | None
+
+
+class GithubRepoOut(BaseModel):
+    """docs/frontend-to-backend-requests.md #1: 내 GitHub 레포 목록."""
+
+    full_name: str
+    owner: str
+    private: bool

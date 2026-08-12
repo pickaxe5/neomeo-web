@@ -21,6 +21,9 @@ class ProjectOut(BaseModel):
     repo_full_name: str | None
     repo_id: str | None
     created_at: datetime
+    # docs/frontend-to-backend-requests.md #4: 요청한 사용자가 project_admins에 속하는지 여부.
+    # 비로그인 조회 시 False.
+    is_admin: bool = False
 
     model_config = {"from_attributes": True}
 
