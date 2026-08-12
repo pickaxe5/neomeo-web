@@ -9,6 +9,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { ProjectPage } from "./pages/ProjectPage";
 import { TeamPage } from "./pages/TeamPage";
 import { InviteAcceptPage } from "./pages/InviteAcceptPage";
+import { ProjectInviteAcceptPage } from "./pages/ProjectInviteAcceptPage";
 
 const SHELL_PREFIXES = ["/", "/projects", "/teams"];
 
@@ -26,6 +27,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
         <Route path="/invite/:token" element={<InviteAcceptPage />} />
+        <Route path="/project-invite/:token" element={<ProjectInviteAcceptPage />} />
         <Route element={<AppShell />}>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/projects/:projectId" element={<ProjectPage />} />

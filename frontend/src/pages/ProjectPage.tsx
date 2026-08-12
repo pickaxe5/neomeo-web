@@ -7,6 +7,7 @@ import {
   fetchParticipatingTeams,
   updateProject,
   deleteProject,
+  createProjectInviteLink,
 } from "../api/projects";
 import { fetchTimeline, triggerClosure } from "../api/timeline";
 import { fetchBriefing } from "../api/briefing";
@@ -174,6 +175,7 @@ function SettingsTab({
   const [participatingTeamsUnavailable, setParticipatingTeamsUnavailable] = useState(false);
   const [projectName, setProjectName] = useState(project?.name ?? "");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -209,6 +211,16 @@ function SettingsTab({
       const updated = await updateProject(projectId, projectName);
       onUpdated(updated);
       setMessage("프로젝트 이름을 변경했습니다.");
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
+  async function handleCreateInvite() {
+    setError(null);
+    try {
+      const invite = await createProjectInviteLink(projectId);
+      setInviteUrl(`${window.location.origin}/project-invite/${invite.token}`);
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -322,6 +334,21 @@ function SettingsTab({
           </div>
         )}
       </div>
+
+      {isAdmin && (
+        <div className="card">
+          <h2>팀 초대</h2>
+          <p style={{ fontSize: 13 }}>
+            초대 링크를 받은 사람이 자기 팀(리더인 팀)을 골라 참여시킬 수 있습니다.
+          </p>
+          <button onClick={handleCreateInvite}>초대 링크 생성</button>
+          {inviteUrl && (
+            <div className="field" style={{ marginTop: 12 }}>
+              <input readOnly value={inviteUrl} onFocus={(e) => e.target.select()} />
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="quick-actions">
         <div className="quick-action">

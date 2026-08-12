@@ -114,6 +114,20 @@ export interface InviteAcceptResponse {
   joined: boolean;
 }
 
+// NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md
+export interface ProjectInviteLinkOut {
+  token: string;
+  project_id: string;
+  expires_at: string | null;
+}
+
+// NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md
+export interface ProjectInviteAcceptResponse {
+  project: ProjectOut;
+  team: TeamOut;
+  added: boolean;
+}
+
 export interface GithubConnectResult {
   project_id: string;
   connected: boolean;

@@ -181,3 +181,56 @@ Authorization: Bearer <access_token>
 `project_teams`에 연결된 `teams`를 조인해서 반환하면 됩니다. `TeamOut`을 그대로 재사용해도 무방합니다(그 이상 필드가 와도 프론트에서 무시함).
 
 **프론트 쪽 연동 지점**: `frontend/src/api/projects.ts`의 `fetchParticipatingTeams()`, `frontend/src/pages/ProjectPage.tsx`의 설정 탭 "참여 팀" 카드(팀 이름 클릭 시 해당 팀 상세 페이지로 이동). 팀을 새로 추가하면 이 목록도 즉시 다시 불러오도록 되어 있음. 엔드포인트가 없으면 "참여 팀 목록 기능은 아직 준비 중입니다"라는 안내 문구만 보여줌.
+
+---
+
+## 7. 프로젝트 초대 링크 (팀 초대와 같은 패턴, API는 별도)
+
+**상태**: 미구현 (요청일 2026-08-11)
+
+**배경**: PM과 논의 후 정한 방향 — 팀 관리와 프로젝트 관리 모두 "초대 링크" 방식으로 통일하되, 동작이 다르므로 API는 각각 분리합니다.
+
+- **팀 초대** (기존, 이미 구현됨): 팀 리더가 링크 생성 → 받은 사람이 열면 그 사람 개인이 팀원으로 추가됨 (`POST /teams/{id}/invite-links`, `POST /invite/{token}/accept`)
+- **프로젝트 초대** (신규 요청): 프로젝트 관리자가 링크 생성 → 받은 사람이 열면, **그 사람이 리더인 팀 중 하나를 골라서 그 팀 전체가 참여 팀으로 추가됨**. 개인이 아니라 팀 단위로 추가된다는 점이 팀 초대와의 핵심 차이
+
+**요청 엔드포인트 A — 프로젝트 초대 링크 생성**
+
+```
+POST /projects/{project_id}/invite-links
+Authorization: Bearer <access_token>
+```
+
+- 프로젝트 관리자만 가능 (위 3/4번의 `is_admin` 체크와 동일), 아니면 403
+- 응답 형식은 팀 쪽 `InviteLinkOut`과 동일한 모양으로 맞춰주면 프론트가 재사용하기 편함:
+
+```json
+{ "token": "...", "project_id": "...", "expires_at": "2026-09-10T00:00:00Z" }
+```
+
+**요청 엔드포인트 B — 프로젝트 초대 수락**
+
+```
+POST /project-invite/{token}/accept
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{ "team_id": "..." }
+```
+
+- `team_id`는 **요청한 사용자가 리더인 팀**이어야 함 (아니면 403 — 다른 사람이 리더인 팀을 마음대로 참여시키는 것 방지)
+- 해당 팀을 `project_teams`에 추가 (이미 참여 중이면 idempotent하게 처리 — 팀 초대의 `joined` 필드와 같은 패턴)
+- 토큰 만료/무효 시 팀 초대와 동일하게 에러 처리
+
+**요청 응답 형식**
+
+```json
+{
+  "project": { "id": "...", "name": "...", "repo_full_name": "...", "repo_id": 123, "created_at": "..." },
+  "team": { "id": "...", "name": "...", "country": "...", "timezone": "...", "work_start": "...", "work_end": "...", "default_language": "ko", "created_at": "..." },
+  "added": true
+}
+```
+
+`project`/`team`은 기존 `ProjectOut`/`TeamOut` 그대로 재사용 가능. `added`는 팀 초대의 `joined`와 같은 역할(이미 참여 중이었으면 `false`).
+
+**프론트 쪽 연동 지점**: `frontend/src/api/projects.ts`의 `createProjectInviteLink()` / `acceptProjectInvite()`, `frontend/src/pages/ProjectPage.tsx` 설정 탭의 "팀 초대" 카드(관리자에게만 노출, `is_admin` 필요 — 4번 항목과 연동), `frontend/src/pages/ProjectInviteAcceptPage.tsx`(새 라우트 `/project-invite/:token` — 로그인 확인 → `/me/teams`에서 리더인 팀만 골라 드롭다운으로 보여주고 선택 후 수락).
