@@ -35,18 +35,10 @@ export function addParticipatingTeam(projectId: string, teamId: string) {
   });
 }
 
-/**
- * NOT YET IMPLEMENTED on the backend — 404s today.
- * Requested contract: docs/frontend-to-backend-requests.md
- */
 export function fetchParticipatingTeams(projectId: string) {
   return apiRequest<ParticipatingTeamOut[]>(`/projects/${projectId}/teams`);
 }
 
-/**
- * NOT YET IMPLEMENTED on the backend — 404s today.
- * Requested contract: docs/frontend-to-backend-requests.md
- */
 export function deleteProject(projectId: string) {
   return apiRequest<void>(`/projects/${projectId}`, { method: "DELETE" });
 }

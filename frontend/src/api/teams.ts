@@ -20,10 +20,6 @@ export function updateTeam(teamId: string, payload: TeamUpdate) {
   return apiRequest<TeamOut>(`/teams/${teamId}`, { method: "PATCH", body: payload });
 }
 
-/**
- * NOT YET IMPLEMENTED on the backend — 404s today.
- * Requested contract: docs/frontend-to-backend-requests.md
- */
 export function fetchTeamMembers(teamId: string) {
   return apiRequest<TeamMemberOut[]>(`/teams/${teamId}/members`);
 }
@@ -36,18 +32,10 @@ export function acceptInvite(token: string) {
   return apiRequest<InviteAcceptResponse>(`/invite/${token}/accept`, { method: "POST" });
 }
 
-/**
- * NOT YET IMPLEMENTED on the backend — 404s today.
- * Requested contract: docs/frontend-to-backend-requests.md
- */
 export function deleteTeam(teamId: string) {
   return apiRequest<void>(`/teams/${teamId}`, { method: "DELETE" });
 }
 
-/**
- * NOT YET IMPLEMENTED on the backend — 404s today.
- * Requested contract: docs/frontend-to-backend-requests.md
- */
 export function leaveTeam(teamId: string) {
   return apiRequest<void>(`/teams/${teamId}/leave`, { method: "POST" });
 }

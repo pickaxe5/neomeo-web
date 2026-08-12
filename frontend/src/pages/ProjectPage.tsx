@@ -12,7 +12,7 @@ import {
 import { fetchTimeline, triggerClosure } from "../api/timeline";
 import { fetchBriefing } from "../api/briefing";
 import { connectGithub, fetchGithubStatus, fetchMyGithubRepos } from "../api/github";
-import { fetchMyTeams, fetchMyProjects } from "../api/me";
+import { fetchMyTeams } from "../api/me";
 import type {
   BriefingOut,
   GithubRepoOut,
@@ -174,7 +174,7 @@ function SettingsTab({
   const [participatingTeams, setParticipatingTeams] = useState<ParticipatingTeamOut[] | null>(null);
   const [participatingTeamsUnavailable, setParticipatingTeamsUnavailable] = useState(false);
   const [projectName, setProjectName] = useState(project?.name ?? "");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const isAdmin = project?.is_admin === true;
   const [inviteUrl, setInviteUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -186,15 +186,10 @@ function SettingsTab({
       .then(setStatus)
       .catch((err) => setError(errorMessage(err)));
     fetchMyTeams().then(setTeams).catch(() => {});
-    // 백엔드 미구현 상태라 실패가 정상 — 구현되기 전까지는 드롭다운을 숨기고 수동 입력만 남긴다.
+    // GitHub 계정 미연동 사용자는 빈 배열이 정상 응답 — 드롭다운을 숨기고 수동 입력만 남긴다.
     fetchMyGithubRepos()
       .then(setMyRepos)
       .catch(() => setMyRepos(null));
-    // is_admin 필드도 아직 백엔드 미구현 — 내려오기 전까지는 항상 false로 취급되어 삭제 카드가 숨겨진다.
-    fetchMyProjects()
-      .then((projects) => setIsAdmin(projects.find((p) => p.id === projectId)?.is_admin === true))
-      .catch(() => {});
-    // 참여 팀 목록 조회도 아직 백엔드 미구현 — 실패가 정상, 안내 문구로 대체한다.
     fetchParticipatingTeams(projectId)
       .then(setParticipatingTeams)
       .catch(() => setParticipatingTeamsUnavailable(true));
@@ -312,7 +307,7 @@ function SettingsTab({
           <div className="spinner">불러오는 중...</div>
         )}
         {participatingTeamsUnavailable && (
-          <p className="quick-action-meta">참여 팀 목록 기능은 아직 준비 중입니다.</p>
+          <p className="quick-action-meta">참여 팀 목록을 불러오지 못했습니다.</p>
         )}
         {participatingTeams && participatingTeams.length === 0 && (
           <p className="quick-action-meta">아직 참여 중인 팀이 없습니다.</p>

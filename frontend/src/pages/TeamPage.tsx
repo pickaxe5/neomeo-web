@@ -36,7 +36,7 @@ export function TeamPage() {
     fetchMyTeams()
       .then((teams) => setMyRole(teams.find((t) => t.id === teamId)?.role ?? null))
       .catch(() => {});
-    // 백엔드 미구현 상태라 실패가 정상 — 구현되기 전까지는 안내 문구를 대신 보여준다.
+    // 팀 멤버만 조회 가능(403) — 소속이 아니면 조용히 섹션을 숨긴다.
     fetchTeamMembers(teamId)
       .then(setMembers)
       .catch(() => setMembersUnavailable(true));
@@ -190,36 +190,37 @@ export function TeamPage() {
         )}
       </div>
 
-      <div className="card">
-        <h2>팀원</h2>
-        {members === null && !membersUnavailable && <div className="spinner">불러오는 중...</div>}
-        {membersUnavailable && (
-          <p className="quick-action-meta">팀원 목록 기능은 아직 준비 중입니다.</p>
-        )}
-        {members && members.length === 0 && (
-          <p className="quick-action-meta">아직 팀원이 없습니다.</p>
-        )}
-        {members && members.length > 0 && (
-          <div className="list-panel">
-            {members.map((m) => (
-              <div key={m.user_id} className="list-row" style={{ cursor: "default" }}>
-                <span className="list-row-icon">
-                  {(m.github_handle ?? m.name ?? "?").slice(0, 1).toUpperCase()}
-                </span>
-                <span className="list-row-main">
-                  <span className="name">{m.github_handle ? `@${m.github_handle}` : m.name ?? "이름 없음"}</span>
-                  {m.github_handle && m.name && <span className="sub">{m.name}</span>}
-                </span>
-                <span className="list-row-end">
-                  <span className={`badge ${m.role === "leader" ? "accent" : "muted"}`}>
-                    {m.role === "leader" ? "리더" : "멤버"}
+      {!membersUnavailable && (
+        <div className="card">
+          <h2>팀원</h2>
+          {members === null && <div className="spinner">불러오는 중...</div>}
+          {members && members.length === 0 && (
+            <p className="quick-action-meta">아직 팀원이 없습니다.</p>
+          )}
+          {members && members.length > 0 && (
+            <div className="list-panel">
+              {members.map((m) => (
+                <div key={m.user_id} className="list-row" style={{ cursor: "default" }}>
+                  <span className="list-row-icon">
+                    {(m.github_handle ?? m.name ?? "?").slice(0, 1).toUpperCase()}
                   </span>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+                  <span className="list-row-main">
+                    <span className="name">
+                      {m.github_handle ? `@${m.github_handle}` : m.name ?? "이름 없음"}
+                    </span>
+                    {m.github_handle && m.name && <span className="sub">{m.name}</span>}
+                  </span>
+                  <span className="list-row-end">
+                    <span className={`badge ${m.role === "leader" ? "accent" : "muted"}`}>
+                      {m.role === "leader" ? "리더" : "멤버"}
+                    </span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <h2>팀원 초대</h2>

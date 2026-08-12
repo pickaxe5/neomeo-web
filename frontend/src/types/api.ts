@@ -59,35 +59,29 @@ export interface MyProjectOut {
   id: string;
   name: string;
   repo_full_name: string | null;
-  repo_id: number | null;
+  repo_id: string | null;
   created_at: string;
-  // NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md.
-  // Missing/undefined is treated as "not an admin".
-  is_admin?: boolean;
+  is_admin: boolean;
 }
 
 export interface ProjectOut {
   id: string;
   name: string;
   repo_full_name: string | null;
-  repo_id: number | null;
+  repo_id: string | null;
   created_at: string;
+  is_admin: boolean;
 }
 
 export interface ProjectCreate {
   name: string;
   repo_full_name?: string;
-  repo_id?: number;
+  repo_id?: string;
   team_id: string;
 }
 
-// NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md
-export interface ParticipatingTeamOut {
-  id: string;
-  name: string;
-  country: string | null;
-  timezone: string;
-}
+// GET /projects/{id}/teams actually returns full TeamOut rows — reuse that type instead.
+export type ParticipatingTeamOut = TeamOut;
 
 export interface ProjectDocumentOut {
   project_id: string;
@@ -95,7 +89,6 @@ export interface ProjectDocumentOut {
   updated_at: string;
 }
 
-// NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md
 export interface TeamMemberOut {
   user_id: string;
   name: string | null;
@@ -131,7 +124,7 @@ export interface ProjectInviteAcceptResponse {
 export interface GithubConnectResult {
   project_id: string;
   connected: boolean;
-  repo_id: number | null;
+  repo_id: string;
   backfill_event_count: number;
 }
 
@@ -142,7 +135,6 @@ export interface GithubStatusOut {
   last_error: string | null;
 }
 
-// NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md
 export interface GithubRepoOut {
   full_name: string;
   owner: string;
