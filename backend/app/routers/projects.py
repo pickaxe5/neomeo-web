@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.deps import get_current_user, get_optional_user
+from app.core.deps import get_current_user, get_optional_user, require_project_admin
 from app.models.closure import ClosureRun
 from app.models.github_event import RawEvent
 from app.models.project import Project, ProjectAdmin, ProjectDocument, ProjectTeam
@@ -20,16 +20,6 @@ from app.schemas.project import (
 from app.schemas.team import TeamOut
 
 router = APIRouter(prefix="/projects", tags=["projects"])
-
-
-def _require_project_admin(db: Session, project_id, user: User) -> None:
-    admin = (
-        db.query(ProjectAdmin)
-        .filter(ProjectAdmin.project_id == project_id, ProjectAdmin.user_id == user.id)
-        .first()
-    )
-    if admin is None:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "프로젝트 관리자만 수행할 수 있습니다.")
 
 
 @router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
@@ -99,7 +89,7 @@ def update_project(
     project = db.get(Project, project_id)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
-    _require_project_admin(db, project_id, current_user)
+    require_project_admin(db, project_id, current_user)
 
     project.name = payload.name
     db.commit()
@@ -141,7 +131,7 @@ def add_participating_team(
         raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
     if db.get(Team, payload.team_id) is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "팀을 찾을 수 없습니다.")
-    _require_project_admin(db, project_id, current_user)
+    require_project_admin(db, project_id, current_user)
 
     exists = (
         db.query(ProjectTeam)
@@ -179,7 +169,7 @@ def delete_project(
     project = db.get(Project, project_id)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
-    _require_project_admin(db, project_id, current_user)
+    require_project_admin(db, project_id, current_user)
 
     closure_run_ids = [
         row[0] for row in db.query(ClosureRun.id).filter(ClosureRun.project_id == project_id).all()

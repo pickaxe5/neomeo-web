@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import decode_token
+from app.models.project import ProjectAdmin
 from app.models.team import TeamMembership, TeamRole
 from app.models.user import User
 
@@ -59,3 +60,14 @@ def require_team_leader(db: Session, team_id, user: User) -> None:
     )
     if membership is None or membership.role != TeamRole.LEADER:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "팀장만 수행할 수 있습니다.")
+
+
+def require_project_admin(db: Session, project_id, user: User) -> None:
+    """프로젝트 관리자 전용 작업(설정 수정, 레포 연동, 참여 팀 추가, 초대 링크 발급, 삭제) 권한 확인."""
+    admin = (
+        db.query(ProjectAdmin)
+        .filter(ProjectAdmin.project_id == project_id, ProjectAdmin.user_id == user.id)
+        .first()
+    )
+    if admin is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "프로젝트 관리자만 수행할 수 있습니다.")
