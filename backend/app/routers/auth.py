@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_user
+from app.core.i18n import get_lang, t
 from app.core.security import (
     create_access_token,
     create_refresh_token,
@@ -16,7 +17,7 @@ from app.core.security import (
     verify_password,
 )
 from app.models.user import User
-from app.schemas.auth import LoginRequest, RefreshRequest, TokenPair, UserOut
+from app.schemas.auth import LoginRequest, RefreshRequest, SignupRequest, TokenPair, UserOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -45,7 +46,9 @@ def github_login() -> RedirectResponse:
 
 
 @router.get("/github/callback")
-def github_callback(code: str, db: Session = Depends(get_db)) -> RedirectResponse:
+def github_callback(
+    code: str, db: Session = Depends(get_db), lang: str = Depends(get_lang)
+) -> RedirectResponse:
     """GitHub 인가 코드를 토큰으로 교환하고, 최초 로그인 시 사용자를 자동 생성한다.
     로그인 시점에 GitHub 핸들이 확보되어 별도 매핑 단계가 불필요하다 (A-001)."""
     with httpx.Client(timeout=10) as client:
@@ -62,7 +65,7 @@ def github_callback(code: str, db: Session = Depends(get_db)) -> RedirectRespons
         token_data = token_resp.json()
         github_access_token = token_data.get("access_token")
         if not github_access_token:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, "GitHub 인증에 실패했습니다.")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, t("github_auth_failed", lang))
 
         user_resp = client.get(
             GITHUB_USER_API_URL,
@@ -98,26 +101,52 @@ def github_callback(code: str, db: Session = Depends(get_db)) -> RedirectRespons
     return RedirectResponse(redirect_url)
 
 
+@router.post("/signup", response_model=TokenPair, status_code=status.HTTP_201_CREATED)
+def signup(
+    payload: SignupRequest, db: Session = Depends(get_db), lang: str = Depends(get_lang)
+) -> TokenPair:
+    """A-002: 이메일 가입. 심사·테스트 계정 전달용이며 가입과 동시에 로그인 처리한다
+    (기능명세서 1.2). 이미 가입된 이메일이면 로그인 실패와 동일한 문구로 안내해
+    이메일 존재 여부를 노출하지 않는다."""
+    existing = db.query(User).filter(User.email == payload.email).first()
+    if existing is not None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, t("email_taken", lang))
+
+    user = User(
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        name=payload.name,
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return _issue_token_pair(user)
+
+
 @router.post("/login", response_model=TokenPair)
-def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenPair:
+def login(
+    payload: LoginRequest, db: Session = Depends(get_db), lang: str = Depends(get_lang)
+) -> TokenPair:
     """A-002: 자체 로그인. 심사용 테스트 계정은 데모 시드(D-001/D-002)로 발급한다."""
     user = db.query(User).filter(User.email == payload.email).first()
     if user is None or user.password_hash is None or not verify_password(
         payload.password, user.password_hash
     ):
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다.")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, t("invalid_credentials", lang))
     return _issue_token_pair(user)
 
 
 @router.post("/refresh", response_model=TokenPair)
-def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenPair:
+def refresh(
+    payload: RefreshRequest, db: Session = Depends(get_db), lang: str = Depends(get_lang)
+) -> TokenPair:
     """A-003: 세션 관리 — 리프레시 토큰으로 액세스 토큰을 갱신한다."""
     user_id = decode_token(payload.refresh_token, expected_type="refresh")
     if user_id is None:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "유효하지 않거나 만료된 리프레시 토큰입니다.")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, t("invalid_refresh_token", lang))
     user = db.get(User, user_id)
     if user is None:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "사용자를 찾을 수 없습니다.")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, t("user_not_found", lang))
     return _issue_token_pair(user)
 
 

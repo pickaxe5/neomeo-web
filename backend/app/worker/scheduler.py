@@ -18,6 +18,7 @@ from app.models.project import Project, ProjectTeam
 from app.models.team import Team
 from app.services import github_collector
 from app.services.closure_service import run_closure, should_auto_close
+from app.services.unanswered_service import detect_unanswered_items
 
 logger = logging.getLogger("neomeo.worker")
 
@@ -30,6 +31,7 @@ def _effective_now(project: Project) -> datetime:
 def _poll_project(db: Session, project: Project) -> None:
     try:
         github_collector.collect_project_events(db, project)
+        detect_unanswered_items(db, project)  # 3.3: 수집 직후 미응답 항목 갱신
     except github_collector.CollectionError as exc:
         logger.warning("GitHub 수집 실패 (project=%s): %s", project.id, exc)
 

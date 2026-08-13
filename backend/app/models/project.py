@@ -1,3 +1,4 @@
+import secrets
 import uuid
 from datetime import datetime
 
@@ -53,6 +54,23 @@ class ProjectAdmin(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id"))
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+
+
+class ProjectInviteLink(Base):
+    """다른 팀을 프로젝트에 초대하는 링크 (팀 초대 링크와 동일한 패턴, API·테이블은 분리).
+    링크를 받은 팀 리더가 자기 팀을 골라 참여시키면 즉시 반영되고 별도 승인 절차는 없다."""
+
+    __tablename__ = "project_invite_links"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id"))
+    token: Mapped[str] = mapped_column(
+        String(64), unique=True, index=True, default=lambda: secrets.token_urlsafe(24)
+    )
+    created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class ProjectDocument(Base):

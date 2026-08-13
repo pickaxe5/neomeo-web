@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.i18n import get_lang, t
 from app.core.security import create_access_token, create_refresh_token
 from app.models.project import Project
 from app.models.user import User
@@ -27,13 +28,11 @@ def seed(db: Session = Depends(get_db)) -> SeedResponse:
 
 
 @router.post("/login", response_model=TokenPair)
-def demo_login(db: Session = Depends(get_db)) -> TokenPair:
+def demo_login(db: Session = Depends(get_db), lang: str = Depends(get_lang)) -> TokenPair:
     """D-002: 버튼 하나로 데모 계정에 로그인한다. 먼저 /demo/seed가 실행되어 있어야 한다."""
     user = db.query(User).filter(User.email == settings.demo_account_email).first()
     if user is None:
-        raise HTTPException(
-            status.HTTP_404_NOT_FOUND, "데모 계정이 없습니다. 먼저 /demo/seed를 호출하세요."
-        )
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("demo_account_missing", lang))
     return TokenPair(
         access_token=create_access_token(user.id),
         refresh_token=create_refresh_token(user.id),
@@ -41,7 +40,9 @@ def demo_login(db: Session = Depends(get_db)) -> TokenPair:
 
 
 @router.post("/simulate-time", response_model=SimulateTimeResult)
-def simulate_time(payload: SimulateTimeRequest, db: Session = Depends(get_db)) -> SimulateTimeResult:
+def simulate_time(
+    payload: SimulateTimeRequest, db: Session = Depends(get_db), lang: str = Depends(get_lang)
+) -> SimulateTimeResult:
     """D-003: 기준 시각을 임의로 이동해 자동 마감·브리핑 발생을 재현.
 
     10분 폴링 워커(S-001)가 다음 폴링 사이클부터 이 값을 "지금"으로 취급해 팀의 업무 종료
@@ -49,7 +50,7 @@ def simulate_time(payload: SimulateTimeRequest, db: Session = Depends(get_db)) -
     """
     project = db.get(Project, payload.project_id)
     if project is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
 
     project.simulated_now = payload.simulated_now
     db.commit()
