@@ -5,21 +5,34 @@ PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"
 
 # --- 프론트엔드 빌드 ---
-cd frontend
-npm ci --prefer-offline
-VITE_API_BASE_URL=https://neomeo-api.semo3.com npm run build
-cd ..
+if [ -f frontend/package.json ]; then
+  cd frontend
+  npm ci --prefer-offline
+  VITE_API_BASE_URL=https://neomeo-api.semo3.com npm run build
+  cd ..
+else
+  echo "frontend/package.json 없음 — 프론트엔드 빌드 스킵"
+fi
 
 # --- 백엔드 의존성 + 마이그레이션 ---
-cd backend
-if [ ! -d .venv ]; then
-  python3 -m venv .venv
+if [ -f backend/requirements.txt ]; then
+  cd backend
+  if [ ! -d .venv ]; then
+    python3 -m venv .venv
+  fi
+  .venv/bin/pip install -r requirements.txt -q
+  .venv/bin/alembic upgrade head
+  cd ..
+else
+  echo "backend/requirements.txt 없음 — 백엔드 빌드 스킵"
 fi
-.venv/bin/pip install -r requirements.txt -q
-.venv/bin/alembic upgrade head
-cd ..
 
 # --- PM2 재시작 ---
+if [ ! -f ecosystem.config.json ]; then
+  echo "ecosystem.config.json 없음 — pm2 스킵"
+  exit 0
+fi
+
 if pm2 list | grep -q neomeo-frontend; then
   pm2 reload ecosystem.config.json --update-env
 else
