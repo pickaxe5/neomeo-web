@@ -21,8 +21,8 @@ fi
 # --- 백엔드 의존성 + 마이그레이션 ---
 if [ -f backend/requirements.txt ]; then
   cd backend
-  if [ ! -d .venv ]; then
-    python3 -m venv .venv
+  if [ ! -f .venv/bin/pip ]; then
+    python3 -m venv --clear .venv
   fi
   .venv/bin/pip install -r requirements.txt -q
   .venv/bin/alembic upgrade head
