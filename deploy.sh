@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# 서버에서 실행되는 배포 스크립트.
-# 스택 확정 후 빌드 커맨드와 pm2 start 커맨드를 채워주세요.
+# 서버(self-hosted runner)에서 실행되는 배포 스크립트.
+# 스택 확정 후 빌드 섹션을 채우고, ecosystem.config.json을 서버에 추가하면 자동 배포됩니다.
 set -e
 
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -12,7 +12,14 @@ cd "$PROJECT_DIR"
 #   cd backend  && npm ci && cd ..
 
 # --- PM2 재시작 ---
-# ecosystem.config.json 이 없으면 최초 1회 생성 필요 (서버에서 직접):
-#   pm2 start ecosystem.config.json --env production
-#   pm2 save
-pm2 restart neomeo-web
+if [ ! -f ecosystem.config.json ]; then
+  echo "ecosystem.config.json 없음 — pm2 시작 스킵. 스택 확정 후 서버에 추가하세요."
+  exit 0
+fi
+
+if pm2 list | grep -q neomeo-web; then
+  pm2 reload ecosystem.config.json --update-env
+else
+  pm2 start ecosystem.config.json
+  pm2 save
+fi
