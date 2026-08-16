@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.routers import auth, briefing, demo, github, invites, me, projects, teams, timeline
@@ -39,3 +41,17 @@ app.include_router(demo.router)
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
+if _dist.exists():
+    from fastapi.responses import FileResponse
+
+    app.mount("/assets", StaticFiles(directory=str(_dist / "assets")), name="assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        target = _dist / full_path
+        if target.is_file():
+            return FileResponse(str(target))
+        return FileResponse(str(_dist / "index.html"))
