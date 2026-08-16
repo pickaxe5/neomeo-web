@@ -2,6 +2,7 @@ import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../i18n/LanguageContext";
 import { Sidebar } from "./Sidebar";
+import { SkyBackground } from "./SkyBackground";
 
 export function AppShell() {
   const { isAuthenticated, loading } = useAuth();
@@ -18,7 +19,10 @@ export function AppShell() {
     <div className="app-shell">
       <Sidebar />
       <main className="app-content">
-        <Outlet />
+        <SkyBackground />
+        <div className="app-content-inner">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

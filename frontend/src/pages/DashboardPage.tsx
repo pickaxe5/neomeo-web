@@ -4,17 +4,28 @@ import { fetchMyTeams, fetchMyProjects } from "../api/me";
 import { createTeam } from "../api/teams";
 import { createProject } from "../api/projects";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 import type { MyProjectOut, MyTeamOut } from "../types/api";
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
+import { TeamStatusBar } from "../components/TeamStatusBar";
 
 const INTRO_DISMISSED_KEY = "neomeo_dashboard_intro_dismissed";
 
+function greetingKey(hour: number): string {
+  if (hour >= 5 && hour < 12) return "dashboard.greetingMorning";
+  if (hour >= 12 && hour < 18) return "dashboard.greetingAfternoon";
+  if (hour >= 18 && hour < 23) return "dashboard.greetingEvening";
+  return "dashboard.greetingNight";
+}
+
 export function DashboardPage() {
   const { t } = useLanguage();
+  const { user } = useAuth();
   const [teams, setTeams] = useState<MyTeamOut[] | null>(null);
   const [projects, setProjects] = useState<MyProjectOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(() => localStorage.getItem(INTRO_DISMISSED_KEY) !== "1");
+  const displayName = user?.name ?? user?.github_handle ?? null;
 
   function dismissIntro() {
     localStorage.setItem(INTRO_DISMISSED_KEY, "1");
@@ -71,7 +82,25 @@ export function DashboardPage() {
 
   return (
     <div className="page">
-      <h1>{t("dashboard.title")}</h1>
+      <div className="dashboard-hero">
+        <div className="landing-eyebrow">
+          <span className="landing-eyebrow-dot" />
+          {t("dashboard.eyebrow")}
+        </div>
+        <h1>
+          {t(greetingKey(new Date().getHours()))}
+          {displayName ? `, ${displayName}` : ""}
+        </h1>
+      </div>
+
+      {teams && teams.length > 0 && (
+        <div className="dashboard-hero" style={{ marginBottom: 8 }}>
+          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-dim)" }}>
+            {t("dashboard.teamStatus")}
+          </h2>
+          <TeamStatusBar teams={teams} />
+        </div>
+      )}
 
       {showIntro && (
         <div className="intro-banner">
@@ -136,17 +165,15 @@ export function DashboardPage() {
         ) : teams.length === 0 ? (
           <div className="empty-state">{t("dashboard.noTeams")}</div>
         ) : (
-          <div className="list-panel">
+          <div className="entity-grid">
             {teams.map((t2) => (
-              <Link key={t2.id} to={`/teams/${t2.id}`} className="list-row">
-                <span className="list-row-icon">{t2.name.slice(0, 1)}</span>
-                <span className="list-row-main">
-                  <span className="name">{t2.name}</span>
-                  <span className="sub">
-                    {t2.timezone} · {t2.work_start}–{t2.work_end}
-                  </span>
+              <Link key={t2.id} to={`/teams/${t2.id}`} className="entity-card">
+                <span className="entity-card-icon">{t2.name.slice(0, 1)}</span>
+                <span className="entity-card-name">{t2.name}</span>
+                <span className="entity-card-sub">
+                  {t2.timezone} · {t2.work_start}–{t2.work_end}
                 </span>
-                <span className="list-row-end">
+                <span className="entity-card-footer">
                   <span className={`badge ${t2.role === "leader" ? "accent" : "muted"}`}>
                     {t2.role === "leader" ? t("common.leader") : t("common.member")}
                   </span>
@@ -195,15 +222,13 @@ export function DashboardPage() {
         ) : projects.length === 0 ? (
           <div className="empty-state">{t("dashboard.noProjects")}</div>
         ) : (
-          <div className="list-panel">
+          <div className="entity-grid">
             {projects.map((p) => (
-              <Link key={p.id} to={`/projects/${p.id}`} className="list-row">
-                <span className="list-row-icon">{p.name.slice(0, 1)}</span>
-                <span className="list-row-main">
-                  <span className="name">{p.name}</span>
-                  {p.repo_full_name && <span className="sub">{p.repo_full_name}</span>}
-                </span>
-                <span className="list-row-end">
+              <Link key={p.id} to={`/projects/${p.id}`} className="entity-card">
+                <span className="entity-card-icon">{p.name.slice(0, 1)}</span>
+                <span className="entity-card-name">{p.name}</span>
+                {p.repo_full_name && <span className="entity-card-sub">{p.repo_full_name}</span>}
+                <span className="entity-card-footer">
                   {p.repo_full_name ? (
                     <span className="badge ok">{t("dashboard.githubConnected")}</span>
                   ) : (

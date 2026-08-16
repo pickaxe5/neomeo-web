@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
-import type { ParticipatingTeamOut } from "../types/api";
 import { useLanguage } from "../i18n/LanguageContext";
+
+type StatusTeam = {
+  id: string;
+  name: string;
+  country: string | null;
+  timezone: string;
+  work_start: string;
+  work_end: string;
+};
 
 function localTimeParts(timezone: string, now: Date): { hm: string; display: string } {
   try {
@@ -27,7 +35,7 @@ function isWorking(hm: string, workStart: string, workEnd: string): boolean {
   return hm >= start || hm < end;
 }
 
-export function TeamStatusBar({ teams }: { teams: ParticipatingTeamOut[] }) {
+export function TeamStatusBar({ teams }: { teams: StatusTeam[] }) {
   const { t } = useLanguage();
   const [now, setNow] = useState(() => new Date());
 
