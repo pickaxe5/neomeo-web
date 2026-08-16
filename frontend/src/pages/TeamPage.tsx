@@ -7,18 +7,25 @@ import {
   deleteTeam,
   leaveTeam,
   fetchTeamMembers,
+  updateMyAssignment,
 } from "../api/teams";
 import { fetchMyTeams } from "../api/me";
-import type { TeamOut, TeamRole, TeamMemberOut } from "../types/api";
+import { useAuth } from "../context/AuthContext";
+import { JOB_ROLE_LABELS, JOB_ROLE_OPTIONS } from "../lib/jobRole";
+import type { TeamOut, TeamRole, TeamMemberOut, JobRole } from "../types/api";
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
 
 export function TeamPage() {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [team, setTeam] = useState<TeamOut | null>(null);
   const [myRole, setMyRole] = useState<TeamRole | null>(null);
   const [members, setMembers] = useState<TeamMemberOut[] | null>(null);
   const [membersUnavailable, setMembersUnavailable] = useState(false);
+  const [myJobRole, setMyJobRole] = useState<JobRole | "">("");
+  const [myAssignedArea, setMyAssignedArea] = useState("");
+  const [assignmentSaved, setAssignmentSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<TeamOut>>({});
@@ -38,9 +45,33 @@ export function TeamPage() {
       .catch(() => {});
     // 팀 멤버만 조회 가능(403) — 소속이 아니면 조용히 섹션을 숨긴다.
     fetchTeamMembers(teamId)
-      .then(setMembers)
+      .then((rows) => {
+        setMembers(rows);
+        const mine = rows.find((m) => m.user_id === user?.id);
+        if (mine) {
+          setMyJobRole(mine.job_role ?? "");
+          setMyAssignedArea(mine.assigned_area ?? "");
+        }
+      })
       .catch(() => setMembersUnavailable(true));
-  }, [teamId]);
+  }, [teamId, user?.id]);
+
+  async function handleSaveAssignment(e: React.FormEvent) {
+    e.preventDefault();
+    if (!teamId) return;
+    setError(null);
+    setAssignmentSaved(false);
+    try {
+      const updated = await updateMyAssignment(teamId, {
+        job_role: myJobRole || undefined,
+        assigned_area: myAssignedArea || undefined,
+      });
+      setMembers((prev) => prev?.map((m) => (m.user_id === updated.user_id ? updated : m)) ?? prev);
+      setAssignmentSaved(true);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -199,26 +230,74 @@ export function TeamPage() {
           )}
           {members && members.length > 0 && (
             <div className="list-panel">
-              {members.map((m) => (
-                <div key={m.user_id} className="list-row" style={{ cursor: "default" }}>
-                  <span className="list-row-icon">
-                    {(m.github_handle ?? m.name ?? "?").slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className="list-row-main">
-                    <span className="name">
-                      {m.github_handle ? `@${m.github_handle}` : m.name ?? "이름 없음"}
+              {members.map((m) => {
+                const areaText =
+                  m.assigned_area || (m.assigned_paths && m.assigned_paths.length > 0
+                    ? m.assigned_paths.join(", ")
+                    : null);
+                return (
+                  <div key={m.user_id} className="list-row" style={{ cursor: "default" }}>
+                    <span className="list-row-icon">
+                      {(m.github_handle ?? m.name ?? "?").slice(0, 1).toUpperCase()}
                     </span>
-                    {m.github_handle && m.name && <span className="sub">{m.name}</span>}
-                  </span>
-                  <span className="list-row-end">
-                    <span className={`badge ${m.role === "leader" ? "accent" : "muted"}`}>
-                      {m.role === "leader" ? "리더" : "멤버"}
+                    <span className="list-row-main">
+                      <span className="name">
+                        {m.github_handle ? `@${m.github_handle}` : m.name ?? "이름 없음"}
+                      </span>
+                      <span className="sub">
+                        {areaText ? (
+                          <>
+                            {areaText}
+                            {!m.assigned_area_confirmed && " (추정)"}
+                          </>
+                        ) : (
+                          "담당 영역 미설정"
+                        )}
+                      </span>
                     </span>
-                  </span>
-                </div>
-              ))}
+                    <span className="list-row-end">
+                      {m.job_role && <span className="badge muted">{JOB_ROLE_LABELS[m.job_role]}</span>}
+                      <span className={`badge ${m.role === "leader" ? "accent" : "muted"}`}>
+                        {m.role === "leader" ? "리더" : "멤버"}
+                      </span>
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
+        </div>
+      )}
+
+      {!membersUnavailable && myRole && (
+        <div className="card">
+          <h2>내 역할</h2>
+          <p style={{ fontSize: 13 }}>
+            담당 영역을 직접 입력하면, 커밋 기반 자동 추정값 대신 이 값이 우선 표시됩니다.
+          </p>
+          <form onSubmit={handleSaveAssignment} className="stack">
+            <div className="field">
+              <label>역할</label>
+              <select value={myJobRole} onChange={(e) => setMyJobRole(e.target.value as JobRole | "")}>
+                <option value="">선택 안 함</option>
+                {JOB_ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {JOB_ROLE_LABELS[r]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>담당 영역</label>
+              <input
+                value={myAssignedArea}
+                onChange={(e) => setMyAssignedArea(e.target.value)}
+                placeholder="예: 로그인/결제 플로우"
+              />
+            </div>
+            <button type="submit">저장</button>
+            {assignmentSaved && <span className="badge ok">저장됨</span>}
+          </form>
         </div>
       )}
 

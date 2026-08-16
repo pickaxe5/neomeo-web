@@ -4,7 +4,36 @@
 프론트 코드는 아래 엔드포인트가 없어도 에러 없이 동작하도록(기능만 숨김) 이미 방어적으로 작성해 뒀습니다 —
 백엔드가 구현되는 즉시 프론트 쪽 추가 작업 없이 바로 붙습니다.
 
-**1~6번은 백엔드 커밋 `0d803cc`(2026-08-11)로 구현 완료, 프론트도 실제 API에 맞춰 반영·검증했습니다.** 7번만 아직 미구현 상태입니다.
+**1~6번은 백엔드 커밋 `0d803cc`(2026-08-11)로 구현 완료, 7번(프로젝트 초대)도 `edcd723`으로 구현 완료 —
+프론트도 전부 실제 API에 맞춰 반영·검증했습니다.**
+
+---
+
+## 🐛 발견한 버그 (`backend-to-frontend-requests.md` 항목 검증 중 발견, 2026-08-16)
+
+### [블로킹] `PATCH /teams/{team_id}/members/me` — job_role 저장 시 500 에러
+
+**재현**: `{"job_role": "frontend", "assigned_area": "..."}`로 PATCH 요청하면 항상 500.
+
+**원인으로 보이는 것**: 로그 상 `sqlalchemy.exc.DataError: invalid input value for enum jobrole: "FRONTEND"`.
+Postgres enum(`jobrole`)은 소문자값(`frontend`, `backend`, ...)으로 만들어져 있는데, SQLAlchemy가
+Python `JobRole(str, enum.Enum)`을 바인딩할 때 기본적으로 멤버의 `.value`가 아니라 `.name`(대문자)을
+DB로 보내는 것으로 보입니다. `Column(Enum(JobRole, values_callable=lambda enum_cls: [e.value for e in
+enum_cls]))`처럼 `values_callable`을 지정해주면 해결될 것 같습니다 (또는 동일 문제가 있는 다른 곳도
+같이 확인 필요).
+
+**영향**: 기능명세서 4.2(역할·담당 영역 직접 입력) 전체가 막혀 있습니다. 프론트 UI(`TeamPage.tsx`
+"내 역할" 카드)는 이미 만들어서 붙여놨는데, 저장을 누르면 이 에러 때문에 실패합니다.
+
+### [경미] `POST /projects` 응답의 `is_admin`이 항상 `false`
+
+프로젝트를 막 생성한 사람은 자동으로 `project_admins`에 들어가는데(정상 동작), `POST /projects`가
+바로 돌려주는 응답의 `is_admin` 필드는 `false`로 나옵니다. 이후 `GET /me/projects`나
+`GET /projects/{id}`를 다시 부르면 정상적으로 `true`가 나오는 걸 보면, `create_project`가 ORM
+객체를 그대로 반환할 때 `is_admin`을 따로 계산해서 채워주지 않는 것 같습니다(`get_project`처럼).
+
+**영향**: 지금 프론트는 프로젝트 생성 직후 `/me/projects`를 다시 불러오는 흐름이라 실사용에 문제는
+없지만, 나중에 생성 응답을 바로 쓰는 화면이 생기면 문제가 됩니다.
 
 ---
 

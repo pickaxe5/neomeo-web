@@ -4,6 +4,7 @@ import type {
   TeamCreate,
   TeamUpdate,
   TeamMemberOut,
+  MyAssignmentUpdate,
   InviteLinkOut,
   InviteAcceptResponse,
 } from "../types/api";
@@ -22,6 +23,13 @@ export function updateTeam(teamId: string, payload: TeamUpdate) {
 
 export function fetchTeamMembers(teamId: string) {
   return apiRequest<TeamMemberOut[]>(`/teams/${teamId}/members`);
+}
+
+export function updateMyAssignment(teamId: string, payload: MyAssignmentUpdate) {
+  return apiRequest<TeamMemberOut>(`/teams/${teamId}/members/me`, {
+    method: "PATCH",
+    body: payload,
+  });
 }
 
 export function createInviteLink(teamId: string) {

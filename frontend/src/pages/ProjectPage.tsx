@@ -25,6 +25,7 @@ import type {
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
 import { TimelineCard } from "../components/TimelineCard";
 import { BriefingPanel } from "../components/BriefingPanel";
+import { TeamStatusBar } from "../components/TeamStatusBar";
 
 type Tab = "timeline" | "briefing" | "settings";
 
@@ -71,6 +72,7 @@ function TimelineTab({ projectId }: { projectId: string }) {
   const [language, setLanguage] = useState<"ko" | "en">("ko");
   const [cards, setCards] = useState<TimelineCardOut[] | null>(null);
   const [teams, setTeams] = useState<MyTeamOut[]>([]);
+  const [participatingTeams, setParticipatingTeams] = useState<ParticipatingTeamOut[]>([]);
   const [teamId, setTeamId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -84,7 +86,8 @@ function TimelineTab({ projectId }: { projectId: string }) {
   useEffect(reload, [projectId, language]);
   useEffect(() => {
     fetchMyTeams().then(setTeams).catch(() => {});
-  }, []);
+    fetchParticipatingTeams(projectId).then(setParticipatingTeams).catch(() => {});
+  }, [projectId]);
 
   async function handleManualClose() {
     if (!teamId) return;
@@ -102,6 +105,8 @@ function TimelineTab({ projectId }: { projectId: string }) {
 
   return (
     <div>
+      <TeamStatusBar teams={participatingTeams} />
+
       <div className="row" style={{ marginBottom: 16 }}>
         <select value={language} onChange={(e) => setLanguage(e.target.value as "ko" | "en")}>
           <option value="ko">한국어</option>
@@ -152,7 +157,7 @@ function BriefingTab({ projectId }: { projectId: string }) {
   if (error) return <ErrorBanner message={error} />;
   if (!briefing) return <div className="spinner">불러오는 중...</div>;
 
-  return <BriefingPanel briefing={briefing} />;
+  return <BriefingPanel briefing={briefing} projectId={projectId} />;
 }
 
 function SettingsTab({

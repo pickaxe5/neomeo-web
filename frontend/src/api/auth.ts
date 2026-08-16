@@ -1,5 +1,5 @@
 import { apiRequest, API_BASE_URL } from "./client";
-import type { TokenPair, UserOut } from "../types/api";
+import type { SignupRequest, TokenPair, UserOut } from "../types/api";
 
 export function githubLoginUrl(): string {
   return `${API_BASE_URL}/auth/github/login`;
@@ -10,6 +10,14 @@ export function login(email: string, password: string) {
     method: "POST",
     auth: false,
     body: { email, password },
+  });
+}
+
+export function signup(payload: SignupRequest) {
+  return apiRequest<TokenPair>("/auth/signup", {
+    method: "POST",
+    auth: false,
+    body: payload,
   });
 }
 

@@ -43,18 +43,10 @@ export function deleteProject(projectId: string) {
   return apiRequest<void>(`/projects/${projectId}`, { method: "DELETE" });
 }
 
-/**
- * NOT YET IMPLEMENTED on the backend — 404s today.
- * Requested contract: docs/frontend-to-backend-requests.md
- */
 export function createProjectInviteLink(projectId: string) {
   return apiRequest<ProjectInviteLinkOut>(`/projects/${projectId}/invite-links`, { method: "POST" });
 }
 
-/**
- * NOT YET IMPLEMENTED on the backend — 404s today.
- * Requested contract: docs/frontend-to-backend-requests.md
- */
 export function acceptProjectInvite(token: string, teamId: string) {
   return apiRequest<ProjectInviteAcceptResponse>(`/project-invite/${token}/accept`, {
     method: "POST",

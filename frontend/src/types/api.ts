@@ -8,9 +8,15 @@ export interface TokenPair {
 
 export interface UserOut {
   id: string;
-  email: string | null;
+  email: string;
   name: string | null;
   github_handle: string | null;
+}
+
+export interface SignupRequest {
+  email: string;
+  password: string;
+  name?: string;
 }
 
 export type TeamRole = "leader" | "member";
@@ -89,11 +95,22 @@ export interface ProjectDocumentOut {
   updated_at: string;
 }
 
+export type JobRole = "frontend" | "backend" | "ai" | "design" | "planning";
+
 export interface TeamMemberOut {
   user_id: string;
   name: string | null;
   github_handle: string | null;
   role: TeamRole;
+  job_role: JobRole | null;
+  assigned_area: string | null;
+  assigned_paths: string[] | null;
+  assigned_area_confirmed: boolean;
+}
+
+export interface MyAssignmentUpdate {
+  job_role?: JobRole;
+  assigned_area?: string;
 }
 
 export interface InviteLinkOut {
@@ -107,14 +124,12 @@ export interface InviteAcceptResponse {
   joined: boolean;
 }
 
-// NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md
 export interface ProjectInviteLinkOut {
   token: string;
   project_id: string;
   expires_at: string | null;
 }
 
-// NOT YET IMPLEMENTED on the backend — see docs/frontend-to-backend-requests.md
 export interface ProjectInviteAcceptResponse {
   project: ProjectOut;
   team: TeamOut;
@@ -157,6 +172,7 @@ export interface TimelineCardOut {
 }
 
 export interface BriefingItem {
+  id: string | null;
   title: string;
   url: string;
   reason: string;

@@ -4,6 +4,18 @@ import type { TokenPair } from "../types/api";
 export const API_BASE_URL: string =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
+const LANG_STORAGE_KEY = "neomeo_lang";
+let currentLang: string = localStorage.getItem(LANG_STORAGE_KEY) ?? "ko";
+
+export function setApiLanguage(lang: string) {
+  currentLang = lang;
+  localStorage.setItem(LANG_STORAGE_KEY, lang);
+}
+
+export function getApiLanguage(): string {
+  return currentLang;
+}
+
 export class ApiError extends Error {
   status: number;
   body: unknown;
@@ -65,7 +77,10 @@ function buildUrl(path: string, query?: RequestOptions["query"]): string {
 }
 
 async function rawRequest(path: string, options: RequestOptions, accessToken: string | null): Promise<Response> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "Accept-Language": currentLang,
+  };
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
