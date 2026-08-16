@@ -1,4 +1,5 @@
 import type { TimelineCardOut } from "../types/api";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function formatRange(start: string, end: string): string {
   const s = new Date(start);
@@ -9,16 +10,20 @@ function formatRange(start: string, end: string): string {
 }
 
 export function TimelineCard({ card }: { card: TimelineCardOut }) {
+  const { t } = useLanguage();
+
   return (
     <div className="card timeline-card">
       <div className="row">
-        <span className="badge">{card.trigger_type === "auto" ? "자동 마감" : "수동 마감"}</span>
-        {card.status === "no_change" && <span className="badge muted">변동 없음</span>}
+        <span className="badge">
+          {card.trigger_type === "auto" ? t("timeline.autoClosed") : t("timeline.manualClosed")}
+        </span>
+        {card.status === "no_change" && <span className="badge muted">{t("timeline.noChange")}</span>}
       </div>
       <div className="meta">{formatRange(card.range_start, card.range_end)}</div>
       {card.content === null ? (
         <p className="content" style={{ opacity: 0.6 }}>
-          카드 생성 중입니다...
+          {t("timeline.cardGenerating")}
         </p>
       ) : (
         <p className="content">{card.content}</p>

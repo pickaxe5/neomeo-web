@@ -11,7 +11,8 @@ import {
 } from "../api/teams";
 import { fetchMyTeams } from "../api/me";
 import { useAuth } from "../context/AuthContext";
-import { JOB_ROLE_LABELS, JOB_ROLE_OPTIONS } from "../lib/jobRole";
+import { useLanguage } from "../i18n/LanguageContext";
+import { JOB_ROLE_OPTIONS, jobRoleKey } from "../lib/jobRole";
 import type { TeamOut, TeamRole, TeamMemberOut, JobRole } from "../types/api";
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
 
@@ -19,6 +20,7 @@ export function TeamPage() {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [team, setTeam] = useState<TeamOut | null>(null);
   const [myRole, setMyRole] = useState<TeamRole | null>(null);
   const [members, setMembers] = useState<TeamMemberOut[] | null>(null);
@@ -35,13 +37,13 @@ export function TeamPage() {
   useEffect(() => {
     if (!teamId) return;
     fetchTeam(teamId)
-      .then((t) => {
-        setTeam(t);
-        setForm(t);
+      .then((t2) => {
+        setTeam(t2);
+        setForm(t2);
       })
       .catch((err) => setError(errorMessage(err)));
     fetchMyTeams()
-      .then((teams) => setMyRole(teams.find((t) => t.id === teamId)?.role ?? null))
+      .then((teams) => setMyRole(teams.find((t2) => t2.id === teamId)?.role ?? null))
       .catch(() => {});
     // 팀 멤버만 조회 가능(403) — 소속이 아니면 조용히 섹션을 숨긴다.
     fetchTeamMembers(teamId)
@@ -106,7 +108,7 @@ export function TeamPage() {
 
   async function handleLeave() {
     if (!teamId || !team) return;
-    if (!window.confirm(`"${team.name}" 팀에서 나가시겠습니까?`)) return;
+    if (!window.confirm(t("team.leaveConfirm", { name: team.name }))) return;
     setError(null);
     setBusy(true);
     try {
@@ -120,7 +122,7 @@ export function TeamPage() {
 
   async function handleDelete() {
     if (!teamId || !team) return;
-    if (!window.confirm(`"${team.name}" 팀을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+    if (!window.confirm(t("team.deleteConfirm", { name: team.name }))) return;
     setError(null);
     setBusy(true);
     try {
@@ -136,7 +138,7 @@ export function TeamPage() {
     return (
       <div className="page">
         <ErrorBanner message={error} />
-        {!error && <div className="spinner">불러오는 중...</div>}
+        {!error && <div className="spinner">{t("common.loading")}</div>}
       </div>
     );
   }
@@ -148,28 +150,28 @@ export function TeamPage() {
 
       <div className="card">
         <div className="row">
-          <h2>팀 설정</h2>
-          <button onClick={() => setEditing((v) => !v)}>{editing ? "취소" : "수정"}</button>
+          <h2>{t("team.settings")}</h2>
+          <button onClick={() => setEditing((v) => !v)}>{editing ? t("common.cancel") : t("common.edit")}</button>
         </div>
 
         {editing ? (
           <form onSubmit={handleSave} className="stack">
             <div className="field">
-              <label>팀 이름</label>
+              <label>{t("team.teamName")}</label>
               <input
                 value={form.name ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
             </div>
             <div className="field">
-              <label>타임존</label>
+              <label>{t("team.timezone")}</label>
               <input
                 value={form.timezone ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}
               />
             </div>
             <div className="field">
-              <label>국가</label>
+              <label>{t("team.country")}</label>
               <input
                 value={form.country ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
@@ -177,7 +179,7 @@ export function TeamPage() {
             </div>
             <div className="row">
               <div className="field" style={{ flex: 1 }}>
-                <label>업무 시작</label>
+                <label>{t("team.workStart")}</label>
                 <input
                   type="time"
                   value={form.work_start ?? ""}
@@ -185,7 +187,7 @@ export function TeamPage() {
                 />
               </div>
               <div className="field" style={{ flex: 1 }}>
-                <label>업무 종료</label>
+                <label>{t("team.workEnd")}</label>
                 <input
                   type="time"
                   value={form.work_end ?? ""}
@@ -194,40 +196,45 @@ export function TeamPage() {
               </div>
             </div>
             <div className="field">
-              <label>기본 언어</label>
+              <label>{t("team.defaultLanguage")}</label>
               <select
                 value={form.default_language ?? "ko"}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, default_language: e.target.value as "ko" | "en" }))
                 }
               >
-                <option value="ko">한국어</option>
-                <option value="en">English</option>
+                <option value="ko">{t("common.korean")}</option>
+                <option value="en">{t("common.english")}</option>
               </select>
             </div>
             <button type="submit" className="primary">
-              저장
+              {t("common.save")}
             </button>
           </form>
         ) : (
           <div className="stack">
-            <p>국가: {team.country ?? "-"}</p>
-            <p>타임존: {team.timezone}</p>
             <p>
-              업무 시간: {team.work_start} – {team.work_end}
+              {t("team.countryDisplay")} {team.country ?? "-"}
             </p>
-            <p>기본 언어: {team.default_language === "ko" ? "한국어" : "English"}</p>
+            <p>
+              {t("team.timezoneDisplay")} {team.timezone}
+            </p>
+            <p>
+              {t("team.workHoursDisplay")} {team.work_start} – {team.work_end}
+            </p>
+            <p>
+              {t("team.defaultLanguageDisplay")}{" "}
+              {team.default_language === "ko" ? t("common.korean") : t("common.english")}
+            </p>
           </div>
         )}
       </div>
 
       {!membersUnavailable && (
         <div className="card">
-          <h2>팀원</h2>
-          {members === null && <div className="spinner">불러오는 중...</div>}
-          {members && members.length === 0 && (
-            <p className="quick-action-meta">아직 팀원이 없습니다.</p>
-          )}
+          <h2>{t("team.members")}</h2>
+          {members === null && <div className="spinner">{t("common.loading")}</div>}
+          {members && members.length === 0 && <p className="quick-action-meta">{t("team.noMembers")}</p>}
           {members && members.length > 0 && (
             <div className="list-panel">
               {members.map((m) => {
@@ -242,23 +249,23 @@ export function TeamPage() {
                     </span>
                     <span className="list-row-main">
                       <span className="name">
-                        {m.github_handle ? `@${m.github_handle}` : m.name ?? "이름 없음"}
+                        {m.github_handle ? `@${m.github_handle}` : m.name ?? t("team.noName")}
                       </span>
                       <span className="sub">
                         {areaText ? (
                           <>
                             {areaText}
-                            {!m.assigned_area_confirmed && " (추정)"}
+                            {!m.assigned_area_confirmed && t("team.estimated")}
                           </>
                         ) : (
-                          "담당 영역 미설정"
+                          t("team.noAssignedArea")
                         )}
                       </span>
                     </span>
                     <span className="list-row-end">
-                      {m.job_role && <span className="badge muted">{JOB_ROLE_LABELS[m.job_role]}</span>}
+                      {m.job_role && <span className="badge muted">{t(jobRoleKey(m.job_role))}</span>}
                       <span className={`badge ${m.role === "leader" ? "accent" : "muted"}`}>
-                        {m.role === "leader" ? "리더" : "멤버"}
+                        {m.role === "leader" ? t("common.leader") : t("common.member")}
                       </span>
                     </span>
                   </div>
@@ -271,40 +278,38 @@ export function TeamPage() {
 
       {!membersUnavailable && myRole && (
         <div className="card">
-          <h2>내 역할</h2>
-          <p style={{ fontSize: 13 }}>
-            담당 영역을 직접 입력하면, 커밋 기반 자동 추정값 대신 이 값이 우선 표시됩니다.
-          </p>
+          <h2>{t("team.myRole")}</h2>
+          <p style={{ fontSize: 13 }}>{t("team.myRoleHint")}</p>
           <form onSubmit={handleSaveAssignment} className="stack">
             <div className="field">
-              <label>역할</label>
+              <label>{t("team.role")}</label>
               <select value={myJobRole} onChange={(e) => setMyJobRole(e.target.value as JobRole | "")}>
-                <option value="">선택 안 함</option>
+                <option value="">{t("team.roleNone")}</option>
                 {JOB_ROLE_OPTIONS.map((r) => (
                   <option key={r} value={r}>
-                    {JOB_ROLE_LABELS[r]}
+                    {t(jobRoleKey(r))}
                   </option>
                 ))}
               </select>
             </div>
             <div className="field">
-              <label>담당 영역</label>
+              <label>{t("team.assignedArea")}</label>
               <input
                 value={myAssignedArea}
                 onChange={(e) => setMyAssignedArea(e.target.value)}
-                placeholder="예: 로그인/결제 플로우"
+                placeholder={t("team.assignedAreaPlaceholder")}
               />
             </div>
-            <button type="submit">저장</button>
-            {assignmentSaved && <span className="badge ok">저장됨</span>}
+            <button type="submit">{t("common.save")}</button>
+            {assignmentSaved && <span className="badge ok">{t("team.savedBadge")}</span>}
           </form>
         </div>
       )}
 
       <div className="card">
-        <h2>팀원 초대</h2>
-        <p style={{ fontSize: 13 }}>초대 링크는 30일간 유효합니다. (리더만 생성 가능)</p>
-        <button onClick={handleInvite}>초대 링크 생성</button>
+        <h2>{t("team.inviteMembers")}</h2>
+        <p style={{ fontSize: 13 }}>{t("team.inviteHint")}</p>
+        <button onClick={handleInvite}>{t("team.createInviteLink")}</button>
         {inviteUrl && (
           <div className="field" style={{ marginTop: 12 }}>
             <input readOnly value={inviteUrl} onFocus={(e) => e.target.select()} />
@@ -314,26 +319,26 @@ export function TeamPage() {
 
       {myRole && (
         <div className="card danger-zone">
-          <h2>탈퇴 및 삭제</h2>
+          <h2>{t("team.dangerZone")}</h2>
           {myRole === "member" && (
             <div className="danger-row">
               <div>
-                <strong>팀 나가기</strong>
-                <p>이 팀에서 내 멤버십만 제거합니다. 다른 팀원에게는 영향이 없습니다.</p>
+                <strong>{t("team.leaveTeam")}</strong>
+                <p>{t("team.leaveTeamDesc")}</p>
               </div>
               <button onClick={handleLeave} disabled={busy}>
-                나가기
+                {t("team.leave")}
               </button>
             </div>
           )}
           {myRole === "leader" && (
             <div className="danger-row">
               <div>
-                <strong>팀 삭제</strong>
-                <p>팀과 소속 멤버십을 모두 삭제합니다. 되돌릴 수 없습니다.</p>
+                <strong>{t("team.deleteTeam")}</strong>
+                <p>{t("team.deleteTeamDesc")}</p>
               </div>
               <button className="danger" onClick={handleDelete} disabled={busy}>
-                삭제
+                {t("common.delete")}
               </button>
             </div>
           )}

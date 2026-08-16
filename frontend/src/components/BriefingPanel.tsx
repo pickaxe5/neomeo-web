@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { BriefingItem, BriefingOut } from "../types/api";
 import { resolveUnansweredItem } from "../api/briefing";
 import { errorMessage } from "./ErrorBanner";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function NeedsResponseRow({
   item,
@@ -14,6 +15,7 @@ function NeedsResponseRow({
   resolved: boolean;
   onToggled: (id: string, resolved: boolean) => void;
 }) {
+  const { t } = useLanguage();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +40,7 @@ function NeedsResponseRow({
           {item.title}
         </a>
         <button onClick={toggle} disabled={busy} style={{ flexShrink: 0 }}>
-          {resolved ? "완료 취소" : "완료로 표시"}
+          {resolved ? t("briefing.undoDone") : t("briefing.markDone")}
         </button>
       </div>
       <p className="reason">{item.reason}</p>
@@ -59,6 +61,7 @@ function InfoRow({ item }: { item: BriefingItem }) {
 }
 
 export function BriefingPanel({ briefing, projectId }: { briefing: BriefingOut; projectId: string }) {
+  const { t } = useLanguage();
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set());
 
   function handleToggled(id: string, resolved: boolean) {
@@ -78,7 +81,7 @@ export function BriefingPanel({ briefing, projectId }: { briefing: BriefingOut; 
   if (isEmpty) {
     return (
       <div className="empty-state">
-        <p>지금은 확인할 브리핑 항목이 없습니다.</p>
+        <p>{t("briefing.empty")}</p>
       </div>
     );
   }
@@ -93,7 +96,7 @@ export function BriefingPanel({ briefing, projectId }: { briefing: BriefingOut; 
     <div className="stack">
       {briefing.needs_my_response.length > 0 && (
         <div className="card">
-          <h3>내가 답해야 할 질문</h3>
+          <h3>{t("briefing.needsResponse")}</h3>
           <div className="briefing-list">
             {sortedNeedsResponse.map((item) => (
               <NeedsResponseRow
@@ -109,7 +112,7 @@ export function BriefingPanel({ briefing, projectId }: { briefing: BriefingOut; 
       )}
       {briefing.affects_my_work.length > 0 && (
         <div className="card">
-          <h3>내 작업에 영향을 주는 변경</h3>
+          <h3>{t("briefing.affectsWork")}</h3>
           <div className="briefing-list">
             {briefing.affects_my_work.map((item) => (
               <InfoRow key={item.url} item={item} />
@@ -119,7 +122,7 @@ export function BriefingPanel({ briefing, projectId }: { briefing: BriefingOut; 
       )}
       {briefing.team_progress_summary && (
         <div className="card">
-          <h3>팀 진행 요약</h3>
+          <h3>{t("briefing.teamProgress")}</h3>
           <p>{briefing.team_progress_summary}</p>
         </div>
       )}

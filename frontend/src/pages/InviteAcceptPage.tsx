@@ -4,10 +4,12 @@ import { acceptInvite } from "../api/teams";
 import type { TeamOut } from "../types/api";
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../i18n/LanguageContext";
 
 export function InviteAcceptPage() {
   const { token } = useParams<{ token: string }>();
   const { isAuthenticated, loading } = useAuth();
+  const { t } = useLanguage();
   const [team, setTeam] = useState<TeamOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -21,16 +23,16 @@ export function InviteAcceptPage() {
       .finally(() => setBusy(false));
   }, [token, isAuthenticated, loading]);
 
-  if (loading) return <div className="spinner">불러오는 중...</div>;
+  if (loading) return <div className="spinner">{t("common.loading")}</div>;
 
   if (!isAuthenticated) {
     return (
       <div className="page page-narrow">
         <div className="card">
-          <h2>팀 초대</h2>
-          <p>초대를 수락하려면 먼저 로그인해야 합니다.</p>
+          <h2>{t("invite.teamTitle")}</h2>
+          <p>{t("invite.loginRequired")}</p>
           <Link to={`/login?next=/invite/${token}`}>
-            <button className="primary">로그인하러 가기</button>
+            <button className="primary">{t("invite.goLogin")}</button>
           </Link>
         </div>
       </div>
@@ -40,16 +42,14 @@ export function InviteAcceptPage() {
   return (
     <div className="page page-narrow">
       <div className="card">
-        <h2>팀 초대</h2>
+        <h2>{t("invite.teamTitle")}</h2>
         <ErrorBanner message={error} />
-        {busy && <p>초대를 처리하는 중...</p>}
+        {busy && <p>{t("invite.processing")}</p>}
         {team && (
           <>
-            <p>
-              <strong>{team.name}</strong> 팀에 합류했습니다.
-            </p>
+            <p>{t("invite.joinedTeam", { team: team.name })}</p>
             <Link to="/">
-              <button className="primary">대시보드로 이동</button>
+              <button className="primary">{t("invite.goDashboard")}</button>
             </Link>
           </>
         )}

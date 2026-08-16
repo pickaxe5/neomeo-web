@@ -3,10 +3,12 @@ import { Navigate } from "react-router-dom";
 import { githubLoginUrl, login, signup } from "../api/auth";
 import { demoLogin, seedDemo } from "../api/demo";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../i18n/LanguageContext";
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
 
 export function LoginPage() {
   const { isAuthenticated, setTokens } = useAuth();
+  const { t } = useLanguage();
   const [mode, setMode] = useState<"login" | "signup">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -74,38 +76,33 @@ export function LoginPage() {
 
   return (
     <div className="page page-narrow">
-      <h1>너머에 로그인</h1>
-      <p style={{ marginBottom: 24 }}>
-        시차를 넘어 팀의 하루를 이어주는 비동기 인수인계 레이어
-      </p>
+      <h1>{t("login.title")}</h1>
+      <p style={{ marginBottom: 24 }}>{t("login.subtitle")}</p>
 
       <div className="card stack">
         <div>
           <a href={githubLoginUrl()}>
             <button className="primary" style={{ width: "100%" }}>
-              GitHub로 로그인
+              {t("login.githubButton")}
             </button>
           </a>
-          <p className="hint">실제 팀·저장소로 시작합니다. GitHub 계정 인증이 필요해요.</p>
+          <p className="hint">{t("login.githubHint")}</p>
         </div>
         <div>
           <button onClick={handleDemoLogin} disabled={busy} style={{ width: "100%" }}>
-            데모 계정으로 체험하기
+            {t("login.demoButton")}
           </button>
-          <p className="hint">
-            가입 없이 바로 둘러보고 싶다면 이 버튼을 누르세요. 서울·베를린·샌프란시스코 3개 팀으로
-            구성된 예시 프로젝트가 자동 생성되고 곧바로 로그인됩니다.
-          </p>
+          <p className="hint">{t("login.demoHint")}</p>
         </div>
       </div>
 
       <div className="card">
         <div className="tabs" style={{ marginBottom: 16 }}>
           <button className={mode === "login" ? "active" : ""} onClick={() => switchMode("login")}>
-            이메일 로그인
+            {t("login.tabLogin")}
           </button>
           <button className={mode === "signup" ? "active" : ""} onClick={() => switchMode("signup")}>
-            회원가입
+            {t("login.tabSignup")}
           </button>
         </div>
 
@@ -114,7 +111,7 @@ export function LoginPage() {
         {mode === "login" ? (
           <form onSubmit={handlePasswordLogin} className="stack">
             <div className="field">
-              <label htmlFor="email">이메일</label>
+              <label htmlFor="email">{t("login.emailLabel")}</label>
               <input
                 id="email"
                 type="email"
@@ -124,7 +121,7 @@ export function LoginPage() {
               />
             </div>
             <div className="field">
-              <label htmlFor="password">비밀번호</label>
+              <label htmlFor="password">{t("login.passwordLabel")}</label>
               <input
                 id="password"
                 type="password"
@@ -134,13 +131,13 @@ export function LoginPage() {
               />
             </div>
             <button type="submit" disabled={busy}>
-              로그인
+              {t("login.loginButton")}
             </button>
           </form>
         ) : (
           <form onSubmit={handleSignup} className="stack">
             <div className="field">
-              <label htmlFor="signup-email">이메일</label>
+              <label htmlFor="signup-email">{t("login.emailLabel")}</label>
               <input
                 id="signup-email"
                 type="email"
@@ -150,7 +147,7 @@ export function LoginPage() {
               />
             </div>
             <div className="field">
-              <label htmlFor="signup-password">비밀번호</label>
+              <label htmlFor="signup-password">{t("login.passwordLabel")}</label>
               <input
                 id="signup-password"
                 type="password"
@@ -160,11 +157,11 @@ export function LoginPage() {
               />
             </div>
             <div className="field">
-              <label htmlFor="signup-name">이름 (선택)</label>
+              <label htmlFor="signup-name">{t("login.nameLabel")}</label>
               <input id="signup-name" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
             <button type="submit" className="primary" disabled={busy}>
-              가입하고 시작하기
+              {t("login.signupButton")}
             </button>
           </form>
         )}

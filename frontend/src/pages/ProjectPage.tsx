@@ -13,6 +13,7 @@ import { fetchTimeline, triggerClosure } from "../api/timeline";
 import { fetchBriefing } from "../api/briefing";
 import { connectGithub, fetchGithubStatus, fetchMyGithubRepos } from "../api/github";
 import { fetchMyTeams } from "../api/me";
+import { useLanguage } from "../i18n/LanguageContext";
 import type {
   BriefingOut,
   GithubRepoOut,
@@ -31,6 +32,7 @@ type Tab = "timeline" | "briefing" | "settings";
 
 export function ProjectPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>("timeline");
   const [project, setProject] = useState<ProjectOut | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,18 +48,18 @@ export function ProjectPage() {
 
   return (
     <div className="page">
-      <h1>{project?.name ?? "프로젝트"}</h1>
+      <h1>{project?.name ?? t("project.fallbackTitle")}</h1>
       <ErrorBanner message={error} />
 
       <div className="tabs">
         <button className={tab === "timeline" ? "active" : ""} onClick={() => setTab("timeline")}>
-          타임라인
+          {t("project.tabTimeline")}
         </button>
         <button className={tab === "briefing" ? "active" : ""} onClick={() => setTab("briefing")}>
-          브리핑
+          {t("project.tabBriefing")}
         </button>
         <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}>
-          설정
+          {t("project.tabSettings")}
         </button>
       </div>
 
@@ -69,6 +71,7 @@ export function ProjectPage() {
 }
 
 function TimelineTab({ projectId }: { projectId: string }) {
+  const { t } = useLanguage();
   const [language, setLanguage] = useState<"ko" | "en">("ko");
   const [cards, setCards] = useState<TimelineCardOut[] | null>(null);
   const [teams, setTeams] = useState<MyTeamOut[]>([]);
@@ -109,20 +112,20 @@ function TimelineTab({ projectId }: { projectId: string }) {
 
       <div className="row" style={{ marginBottom: 16 }}>
         <select value={language} onChange={(e) => setLanguage(e.target.value as "ko" | "en")}>
-          <option value="ko">한국어</option>
-          <option value="en">English</option>
+          <option value="ko">{t("common.korean")}</option>
+          <option value="en">{t("common.english")}</option>
         </select>
         <div className="actions">
           <select value={teamId} onChange={(e) => setTeamId(e.target.value)}>
-            <option value="">팀 선택</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
+            <option value="">{t("timeline.teamSelectPlaceholder")}</option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
               </option>
             ))}
           </select>
           <button onClick={handleManualClose} disabled={!teamId || busy}>
-            지금 마감하기
+            {t("timeline.closeNow")}
           </button>
         </div>
       </div>
@@ -130,9 +133,9 @@ function TimelineTab({ projectId }: { projectId: string }) {
       <ErrorBanner message={error} />
 
       {cards === null ? (
-        <div className="spinner">불러오는 중...</div>
+        <div className="spinner">{t("common.loading")}</div>
       ) : cards.length === 0 ? (
-        <div className="empty-state">아직 생성된 카드가 없습니다.</div>
+        <div className="empty-state">{t("timeline.noCards")}</div>
       ) : (
         <div className="timeline">
           {cards.map((c) => (
@@ -145,6 +148,7 @@ function TimelineTab({ projectId }: { projectId: string }) {
 }
 
 function BriefingTab({ projectId }: { projectId: string }) {
+  const { t } = useLanguage();
   const [briefing, setBriefing] = useState<BriefingOut | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -155,7 +159,7 @@ function BriefingTab({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   if (error) return <ErrorBanner message={error} />;
-  if (!briefing) return <div className="spinner">불러오는 중...</div>;
+  if (!briefing) return <div className="spinner">{t("common.loading")}</div>;
 
   return <BriefingPanel briefing={briefing} projectId={projectId} />;
 }
@@ -170,6 +174,7 @@ function SettingsTab({
   onUpdated: (p: ProjectOut) => void;
 }) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [status, setStatus] = useState<GithubStatusOut | null>(null);
   const [repoFullName, setRepoFullName] = useState("");
   const [myRepos, setMyRepos] = useState<GithubRepoOut[] | null>(null);
@@ -210,7 +215,7 @@ function SettingsTab({
     try {
       const updated = await updateProject(projectId, projectName);
       onUpdated(updated);
-      setMessage("프로젝트 이름을 변경했습니다.");
+      setMessage(t("settings.renamedMessage"));
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -228,7 +233,7 @@ function SettingsTab({
 
   async function handleDeleteProject() {
     if (!project) return;
-    if (!window.confirm(`"${project.name}" 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) return;
+    if (!window.confirm(t("settings.deleteConfirm", { name: project.name }))) return;
     setError(null);
     setBusy(true);
     try {
@@ -259,7 +264,7 @@ function SettingsTab({
     setBusy(true);
     try {
       const result = await connectGithub(projectId, repoFullName);
-      setMessage(`연동 완료 · 이벤트 ${result.backfill_event_count}건 수집`);
+      setMessage(t("settings.connectedMessage", { n: result.backfill_event_count }));
       const s = await fetchGithubStatus(projectId);
       setStatus(s);
     } catch (err) {
@@ -274,7 +279,7 @@ function SettingsTab({
     setError(null);
     try {
       await putProjectDocument(projectId, docContent);
-      setMessage("기획 문서를 저장했습니다.");
+      setMessage(t("settings.savedDocMessage"));
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -286,7 +291,7 @@ function SettingsTab({
     setError(null);
     try {
       await addParticipatingTeam(projectId, addTeamId);
-      setMessage("팀을 프로젝트에 추가했습니다.");
+      setMessage(t("settings.addedTeamMessage"));
       if (!participatingTeamsUnavailable) {
         fetchParticipatingTeams(projectId)
           .then(setParticipatingTeams)
@@ -307,26 +312,26 @@ function SettingsTab({
       )}
 
       <div className="card">
-        <h2>참여 팀</h2>
+        <h2>{t("settings.participatingTeams")}</h2>
         {participatingTeams === null && !participatingTeamsUnavailable && (
-          <div className="spinner">불러오는 중...</div>
+          <div className="spinner">{t("common.loading")}</div>
         )}
         {participatingTeamsUnavailable && (
-          <p className="quick-action-meta">참여 팀 목록을 불러오지 못했습니다.</p>
+          <p className="quick-action-meta">{t("settings.participatingTeamsUnavailable")}</p>
         )}
         {participatingTeams && participatingTeams.length === 0 && (
-          <p className="quick-action-meta">아직 참여 중인 팀이 없습니다.</p>
+          <p className="quick-action-meta">{t("settings.noParticipatingTeams")}</p>
         )}
         {participatingTeams && participatingTeams.length > 0 && (
           <div className="list-panel">
-            {participatingTeams.map((t) => (
-              <Link key={t.id} to={`/teams/${t.id}`} className="list-row">
-                <span className="list-row-icon">{t.name.slice(0, 1)}</span>
+            {participatingTeams.map((team) => (
+              <Link key={team.id} to={`/teams/${team.id}`} className="list-row">
+                <span className="list-row-icon">{team.name.slice(0, 1)}</span>
                 <span className="list-row-main">
-                  <span className="name">{t.name}</span>
+                  <span className="name">{team.name}</span>
                   <span className="sub">
-                    {t.country ? `${t.country} · ` : ""}
-                    {t.timezone}
+                    {team.country ? `${team.country} · ` : ""}
+                    {team.timezone}
                   </span>
                 </span>
               </Link>
@@ -337,11 +342,9 @@ function SettingsTab({
 
       {isAdmin && (
         <div className="card">
-          <h2>팀 초대</h2>
-          <p style={{ fontSize: 13 }}>
-            초대 링크를 받은 사람이 자기 팀(리더인 팀)을 골라 참여시킬 수 있습니다.
-          </p>
-          <button onClick={handleCreateInvite}>초대 링크 생성</button>
+          <h2>{t("settings.teamInvite")}</h2>
+          <p style={{ fontSize: 13 }}>{t("settings.teamInviteHint")}</p>
+          <button onClick={handleCreateInvite}>{t("settings.createInviteLink")}</button>
           {inviteUrl && (
             <div className="field" style={{ marginTop: 12 }}>
               <input readOnly value={inviteUrl} onFocus={(e) => e.target.select()} />
@@ -353,7 +356,7 @@ function SettingsTab({
       <div className="quick-actions">
         <div className="quick-action">
           <div className="quick-action-head">
-            <h3>GitHub 연동</h3>
+            <h3>{t("settings.githubIntegration")}</h3>
             <span className="actions" style={{ gap: 6 }}>
               {status && (
                 <span
@@ -361,7 +364,11 @@ function SettingsTab({
                     !status.connected ? "muted" : status.last_error ? "danger" : "ok"
                   }`}
                 >
-                  {!status.connected ? "미연결" : status.last_error ? "연결 오류" : "연결됨"}
+                  {!status.connected
+                    ? t("settings.notConnected")
+                    : status.last_error
+                      ? t("settings.connectionError")
+                      : t("settings.connected")}
                 </span>
               )}
               <button
@@ -369,13 +376,13 @@ function SettingsTab({
                 disabled={statusBusy}
                 style={{ padding: "3px 8px", fontSize: 11.5 }}
               >
-                {statusBusy ? "확인 중..." : "상태 확인"}
+                {statusBusy ? t("settings.checking") : t("settings.checkStatus")}
               </button>
             </span>
           </div>
           {status?.connected && project?.repo_full_name && (
             <p className="quick-action-meta">
-              연결된 레포:{" "}
+              {t("settings.connectedRepo")}{" "}
               <a href={`https://github.com/${project.repo_full_name}`} target="_blank" rel="noreferrer">
                 {project.repo_full_name}
               </a>
@@ -388,7 +395,7 @@ function SettingsTab({
                 if (e.target.value) setRepoFullName(e.target.value);
               }}
             >
-              <option value="">내 레포/조직에서 선택...</option>
+              <option value="">{t("settings.selectFromRepos")}</option>
               {Object.entries(
                 myRepos.reduce<Record<string, GithubRepoOut[]>>((groups, r) => {
                   (groups[r.owner] ??= []).push(r);
@@ -414,80 +421,80 @@ function SettingsTab({
               required
             />
             <button type="submit" className="primary" disabled={busy}>
-              연결
+              {t("settings.connectButton")}
             </button>
           </form>
           {status?.connected && !status.last_collected_at && !status.last_error && (
-            <p className="quick-action-meta">첫 수집 대기 중 (최대 10분 소요)</p>
+            <p className="quick-action-meta">{t("settings.firstCollectWaiting")}</p>
           )}
           {status?.last_collected_at && (
             <p className="quick-action-meta">
-              마지막 수집: {new Date(status.last_collected_at).toLocaleString()}
+              {t("settings.lastCollected")} {new Date(status.last_collected_at).toLocaleString()}
             </p>
           )}
           {status?.last_error && (
             <p className="quick-action-meta" style={{ color: "var(--danger)" }}>
-              오류: {status.last_error}
+              {t("settings.error")} {status.last_error}
             </p>
           )}
         </div>
 
         <div className="quick-action">
           <div className="quick-action-head">
-            <h3>참여 팀 추가</h3>
+            <h3>{t("settings.addTeam")}</h3>
           </div>
           <form onSubmit={handleAddTeam} className="inline-form">
             <select value={addTeamId} onChange={(e) => setAddTeamId(e.target.value)}>
-              <option value="">팀 선택</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
+              <option value="">{t("timeline.teamSelectPlaceholder")}</option>
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
                 </option>
               ))}
             </select>
-            <button type="submit">추가</button>
+            <button type="submit">{t("common.add")}</button>
           </form>
         </div>
 
         <div className="quick-action">
           <div className="quick-action-head">
-            <h3>이름 변경</h3>
+            <h3>{t("settings.renameProject")}</h3>
           </div>
           <form onSubmit={handleRenameProject} className="inline-form">
             <input value={projectName} onChange={(e) => setProjectName(e.target.value)} />
-            <button type="submit">변경</button>
+            <button type="submit">{t("common.change")}</button>
           </form>
           {project && (
             <p className="quick-action-meta">
-              생성일 {new Date(project.created_at).toLocaleDateString()}
+              {t("settings.createdAt")} {new Date(project.created_at).toLocaleDateString()}
             </p>
           )}
         </div>
       </div>
 
       <div className="card">
-        <h2>기획 문서 (AI 컨텍스트)</h2>
+        <h2>{t("settings.planningDoc")}</h2>
         <form onSubmit={handleSaveDocument} className="stack">
           <textarea
             rows={6}
             value={docContent}
             onChange={(e) => setDocContent(e.target.value)}
-            placeholder="프로젝트 배경, 목표 등을 입력하면 카드 생성 품질에 활용됩니다."
+            placeholder={t("settings.planningDocPlaceholder")}
           />
-          <button type="submit">저장</button>
+          <button type="submit">{t("common.save")}</button>
         </form>
       </div>
 
       {isAdmin && (
         <div className="card danger-zone">
-          <h2>삭제</h2>
+          <h2>{t("settings.deleteSection")}</h2>
           <div className="danger-row">
             <div>
-              <strong>프로젝트 삭제</strong>
-              <p>프로젝트와 타임라인 카드, GitHub 연동 정보를 모두 삭제합니다. 되돌릴 수 없습니다.</p>
+              <strong>{t("settings.deleteProjectTitle")}</strong>
+              <p>{t("settings.deleteProjectDesc")}</p>
             </div>
             <button className="danger" onClick={handleDeleteProject} disabled={busy}>
-              삭제
+              {t("common.delete")}
             </button>
           </div>
         </div>

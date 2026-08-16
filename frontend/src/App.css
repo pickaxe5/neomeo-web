@@ -120,6 +120,17 @@
   color: var(--sidebar-text);
   font-size: 12.5px;
 }
+.sidebar-lang {
+  background: transparent;
+  border-color: var(--sidebar-border);
+  color: var(--sidebar-text);
+  font-size: 12.5px;
+  padding: 6px 8px;
+}
+.navbar-lang {
+  padding: 5px 8px;
+  font-size: 12.5px;
+}
 .sidebar-footer button:hover {
   color: var(--sidebar-text-h);
   border-color: var(--sidebar-text);

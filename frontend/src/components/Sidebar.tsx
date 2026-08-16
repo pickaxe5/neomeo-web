@@ -1,9 +1,12 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../i18n/LanguageContext";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 export function Sidebar() {
   const { user, logout } = useAuth();
-  const displayName = user?.name ?? user?.github_handle ?? user?.email ?? "사용자";
+  const { t } = useLanguage();
+  const displayName = user?.name ?? user?.github_handle ?? user?.email ?? t("common.user");
 
   return (
     <aside className="sidebar">
@@ -23,16 +26,17 @@ export function Sidebar() {
               strokeLinejoin="round"
             />
           </svg>
-          대시보드
+          {t("common.dashboard")}
         </NavLink>
       </nav>
 
       <div className="sidebar-footer">
+        <LanguageSwitcher className="sidebar-lang" />
         <div className="sidebar-user">
           <span className="avatar">{displayName.slice(0, 1)}</span>
           <span className="sidebar-user-name">{displayName}</span>
         </div>
-        <button onClick={logout}>로그아웃</button>
+        <button onClick={logout}>{t("common.logout")}</button>
       </div>
     </aside>
   );

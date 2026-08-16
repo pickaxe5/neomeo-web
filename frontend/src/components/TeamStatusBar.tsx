@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { ParticipatingTeamOut } from "../types/api";
+import { useLanguage } from "../i18n/LanguageContext";
 
 function localTimeParts(timezone: string, now: Date): { hm: string; display: string } {
   try {
@@ -27,6 +28,7 @@ function isWorking(hm: string, workStart: string, workEnd: string): boolean {
 }
 
 export function TeamStatusBar({ teams }: { teams: ParticipatingTeamOut[] }) {
+  const { t } = useLanguage();
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -38,18 +40,18 @@ export function TeamStatusBar({ teams }: { teams: ParticipatingTeamOut[] }) {
 
   return (
     <div className="team-status-bar">
-      {teams.map((t) => {
-        const { hm, display } = localTimeParts(t.timezone, now);
-        const working = isWorking(hm, t.work_start, t.work_end);
+      {teams.map((team) => {
+        const { hm, display } = localTimeParts(team.timezone, now);
+        const working = isWorking(hm, team.work_start, team.work_end);
         return (
-          <div key={t.id} className="team-status-chip">
+          <div key={team.id} className="team-status-chip">
             <span className="name">
-              {t.name}
-              {t.country && <span className="country"> · {t.country}</span>}
+              {team.name}
+              {team.country && <span className="country"> · {team.country}</span>}
             </span>
             <span className="time">{display}</span>
             <span className={`badge ${working ? "ok" : "muted"}`}>
-              {working ? "업무 중" : "퇴근"}
+              {working ? t("timeline.working") : t("timeline.off")}
             </span>
           </div>
         );
