@@ -29,7 +29,7 @@ def create_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     lang: str = Depends(get_lang),
-) -> Project:
+) -> ProjectOut:
     """O-003: 프로젝트 생성 및 레포 선택. 생성자의 팀이 첫 참여 팀이 되고,
     생성자는 프로젝트 관리자가 된다."""
     team = db.get(Team, payload.team_id)
@@ -48,7 +48,14 @@ def create_project(
     db.add(ProjectAdmin(project_id=project.id, user_id=current_user.id))
     db.commit()
     db.refresh(project)
-    return project
+    return ProjectOut(
+        id=project.id,
+        name=project.name,
+        repo_full_name=project.repo_full_name,
+        repo_id=project.repo_id,
+        created_at=project.created_at,
+        is_admin=True,
+    )
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
@@ -87,7 +94,7 @@ def update_project(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     lang: str = Depends(get_lang),
-) -> Project:
+) -> ProjectOut:
     """C-003: 프로젝트 설정 수정 (이름). 레포 변경은 실제 접근 권한 재검증이 필요하므로
     이 엔드포인트가 아니라 /github/connect를 통해서만 한다."""
     project = db.get(Project, project_id)
@@ -98,7 +105,17 @@ def update_project(
     project.name = payload.name
     db.commit()
     db.refresh(project)
-    return project
+    # require_project_admin이 이미 검증했으므로 is_admin=True. 이걸 안 채우면 Project에는
+    # is_admin 속성이 없어 ProjectOut 기본값(False)으로 응답돼, 방금 검증된 관리자에게도
+    # is_admin=false가 내려간다 (O-003 생성 응답과 동일한 문제).
+    return ProjectOut(
+        id=project.id,
+        name=project.name,
+        repo_full_name=project.repo_full_name,
+        repo_id=project.repo_id,
+        created_at=project.created_at,
+        is_admin=True,
+    )
 
 
 @router.put("/{project_id}/document", response_model=ProjectDocumentOut)

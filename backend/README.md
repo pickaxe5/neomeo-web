@@ -84,20 +84,20 @@ alembic/      DB 마이그레이션
 
 A-001~003(인증) · O-003·005·006(온보딩) · G-001~006(GitHub 연동) · S-001~003·006(마감/요약) · D-001~003(시연 지원) · C-006(배포)
 
-## 배포 (C-006, Render)
+## 배포 (C-006, 온프레미스)
 
-저장소 루트의 `render.yaml`이 Render Blueprint로 웹서비스+Postgres를 함께 정의합니다. **아래는 Render 계정에서 직접 해야 하는 절차입니다 — 계정 연결·GitHub 저장소 연결은 대신해드릴 수 없습니다.**
+Render 대신 자체 서버(semo3)에 직접 배포하는 방식으로 변경되었습니다. 배포 파이프라인은 저장소
+루트(`main`/`frontend` 브랜치에 있음, 이 브랜치가 `main`에 머지되면 그대로 적용됨)에 이미 구성되어
+있고, PM/인프라 담당이 서버 쪽 설정(러너 등록, PM2)을 마쳐뒀습니다. 백엔드 담당은 별도 배포 조작 없이
+`main`에 코드를 푸시하기만 하면 됩니다.
 
-1. 이 프로젝트를 GitHub 저장소로 푸시 (아직 원격 저장소가 없다면 먼저 생성)
-2. [Render 대시보드](https://dashboard.render.com) → **New** → **Blueprint** → 방금 푸시한 GitHub 저장소 선택 → Render가 `render.yaml`을 읽어 `neomeo-backend`(웹서비스)와 `neomeo-db`(Postgres, 둘 다 무료 플랜)를 자동 생성
-3. 첫 배포 후 서비스 URL이 정해지면(예: `https://neomeo-backend.onrender.com`), 대시보드의 **Environment** 탭에서:
-   - `GITHUB_OAUTH_CALLBACK_URL` → `https://<서비스 URL>/auth/github/callback`
-   - `FRONTEND_BASE_URL` → 배포된 프론트 URL (아직 없으면 임시로 `*` 또는 로컬 개발 URL)
-   - `GITHUB_CLIENT_ID`/`GITHUB_CLIENT_SECRET` → GitHub OAuth App 발급 후 채우기 (콜백 URL은 위 2번 값과 동일하게 GitHub 앱 설정에도 등록)
-4. `JWT_SECRET_KEY`·`DEMO_ACCOUNT_PASSWORD`는 Render가 자동 생성합니다 — 심사용 계정 비밀번호가 필요하면 Environment 탭에서 확인
-5. `/health`가 200을 반환하면 배포 성공. `/docs`에서 API 계약을 팀원과 공유
+- `.github/workflows/deploy.yml` — `main` push 시 서버에 등록된 self-hosted 러너(`semo3`)에서
+  `git pull origin main && bash deploy.sh` 실행
+- `deploy.sh` — 프론트 빌드, 백엔드는 `.venv`에 `requirements.txt` 설치 후 `alembic upgrade head`로
+  마이그레이션 적용, 마지막으로 PM2(`neomeo-backend` 프로세스)를 reload/start
+- 서버 접근 권한·PM2 `ecosystem.config.json`(서버에만 존재, 저장소에는 없음)은 PM/인프라 담당 소관
 
-**무료 플랜 주의사항**: Render 무료 웹서비스는 15분 무요청 시 슬립되고, 다음 요청에서 콜드스타트(수십 초)가 발생합니다. 그동안 10분 폴링 워커(S-001)도 함께 멈춥니다 — 실시연 때는 슬립되지 않은 상태를 미리 확인하거나, 어차피 시연은 시간 시뮬레이션(D-003)으로 하므로 큰 영향은 없습니다. Render 무료 Postgres는 일정 기간 후 만료될 수 있으니 발표 직전에 재확인하세요.
+배포 성공 여부는 `/health`가 200을 반환하는지로 확인합니다.
 
 ## 이번 단계 범위 밖
 
