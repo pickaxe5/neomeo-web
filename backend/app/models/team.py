@@ -7,7 +7,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, String, Time, UniqueConstrain
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.database import Base
+from app.core.database import Base, str_enum_values
 
 
 class TeamRole(str, enum.Enum):
@@ -51,7 +51,10 @@ class TeamMembership(Base):
     role: Mapped[TeamRole] = mapped_column(Enum(TeamRole), default=TeamRole.MEMBER)
 
     # 기능명세서 4.2: 역할·담당 영역. 둘 다 선택 입력이며 기본값은 비어있다.
-    job_role: Mapped[JobRole | None] = mapped_column(Enum(JobRole), nullable=True)
+    # Postgres enum(jobrole)은 소문자 값이라 values_callable 없이는 저장 시 DataError가 난다.
+    job_role: Mapped[JobRole | None] = mapped_column(
+        Enum(JobRole, values_callable=str_enum_values), nullable=True
+    )
     assigned_area: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # 커밋 변경 파일 경로로부터 추론한 주요 디렉토리 목록. 사용자가 직접 확정하기 전까지는
     # 조회 시점마다 최신 활동 기준으로 다시 계산해 갱신한다.
