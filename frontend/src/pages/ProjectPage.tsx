@@ -5,19 +5,20 @@ import {
   putProjectDocument,
   addParticipatingTeam,
   fetchParticipatingTeams,
+  removeParticipatingTeam,
   updateProject,
   deleteProject,
   createProjectInviteLink,
 } from "../api/projects";
 import { fetchTimeline, triggerClosure } from "../api/timeline";
 import { fetchBriefing } from "../api/briefing";
-import { connectGithub, fetchGithubStatus, fetchMyGithubRepos } from "../api/github";
+import { connectGithub, disconnectGithub, fetchGithubStatus, fetchMyGithubRepos } from "../api/github";
 import { fetchMyTeams } from "../api/me";
 import { useLanguage } from "../i18n/LanguageContext";
 import type {
   BriefingOut,
   GithubRepoOut,
-  GithubStatusOut,
+  GithubRepoStatusOut,
   MyTeamOut,
   ParticipatingTeamOut,
   ProjectOut,
@@ -175,7 +176,7 @@ function SettingsTab({
 }) {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const [status, setStatus] = useState<GithubStatusOut | null>(null);
+  const [repos, setRepos] = useState<GithubRepoStatusOut[] | null>(null);
   const [repoFullName, setRepoFullName] = useState("");
   const [myRepos, setMyRepos] = useState<GithubRepoOut[] | null>(null);
   const [docContent, setDocContent] = useState("");
@@ -193,7 +194,7 @@ function SettingsTab({
 
   useEffect(() => {
     fetchGithubStatus(projectId)
-      .then(setStatus)
+      .then(setRepos)
       .catch((err) => setError(errorMessage(err)));
     fetchMyTeams().then(setTeams).catch(() => {});
     // GitHub 계정 미연동 사용자는 빈 배열이 정상 응답 — 드롭다운을 숨기고 수동 입력만 남긴다.
@@ -250,7 +251,7 @@ function SettingsTab({
     setStatusBusy(true);
     try {
       const s = await fetchGithubStatus(projectId);
-      setStatus(s);
+      setRepos(s);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -265,12 +266,24 @@ function SettingsTab({
     try {
       const result = await connectGithub(projectId, repoFullName);
       setMessage(t("settings.connectedMessage", { n: result.backfill_event_count }));
+      setRepoFullName("");
       const s = await fetchGithubStatus(projectId);
-      setStatus(s);
+      setRepos(s);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleDisconnect(repoId: string, repoFullNameLabel: string) {
+    if (!window.confirm(t("settings.disconnectConfirm", { name: repoFullNameLabel }))) return;
+    setError(null);
+    try {
+      await disconnectGithub(projectId, repoId);
+      setRepos((prev) => prev?.filter((r) => r.repo_id !== repoId) ?? prev);
+    } catch (err) {
+      setError(errorMessage(err));
     }
   }
 
@@ -302,6 +315,17 @@ function SettingsTab({
     }
   }
 
+  async function handleRemoveTeam(teamId: string, teamName: string) {
+    if (!window.confirm(t("settings.removeTeamConfirm", { name: teamName }))) return;
+    setError(null);
+    try {
+      await removeParticipatingTeam(projectId, teamId);
+      setParticipatingTeams((prev) => prev?.filter((tm) => tm.id !== teamId) ?? prev);
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  }
+
   return (
     <div className="stack">
       <ErrorBanner message={error} />
@@ -325,16 +349,29 @@ function SettingsTab({
         {participatingTeams && participatingTeams.length > 0 && (
           <div className="list-panel">
             {participatingTeams.map((team) => (
-              <Link key={team.id} to={`/teams/${team.id}`} className="list-row">
-                <span className="list-row-icon">{team.name.slice(0, 1)}</span>
-                <span className="list-row-main">
+              <div key={team.id} className="list-row">
+                <Link to={`/teams/${team.id}`} className="list-row-icon" style={{ textDecoration: "none" }}>
+                  {team.name.slice(0, 1)}
+                </Link>
+                <Link to={`/teams/${team.id}`} className="list-row-main" style={{ textDecoration: "none" }}>
                   <span className="name">{team.name}</span>
                   <span className="sub">
                     {team.country ? `${team.country} · ` : ""}
                     {team.timezone}
                   </span>
-                </span>
-              </Link>
+                </Link>
+                {isAdmin && (
+                  <span className="list-row-end">
+                    <button
+                      className="danger"
+                      style={{ padding: "3px 8px", fontSize: 11.5 }}
+                      onClick={() => handleRemoveTeam(team.id, team.name)}
+                    >
+                      {t("settings.removeTeam")}
+                    </button>
+                  </span>
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -357,37 +394,49 @@ function SettingsTab({
         <div className="quick-action">
           <div className="quick-action-head">
             <h3>{t("settings.githubIntegration")}</h3>
-            <span className="actions" style={{ gap: 6 }}>
-              {status && (
-                <span
-                  className={`badge ${
-                    !status.connected ? "muted" : status.last_error ? "danger" : "ok"
-                  }`}
-                >
-                  {!status.connected
-                    ? t("settings.notConnected")
-                    : status.last_error
-                      ? t("settings.connectionError")
-                      : t("settings.connected")}
-                </span>
-              )}
-              <button
-                onClick={handleRefreshStatus}
-                disabled={statusBusy}
-                style={{ padding: "3px 8px", fontSize: 11.5 }}
-              >
-                {statusBusy ? t("settings.checking") : t("settings.checkStatus")}
-              </button>
-            </span>
+            <button
+              onClick={handleRefreshStatus}
+              disabled={statusBusy}
+              style={{ padding: "3px 8px", fontSize: 11.5 }}
+            >
+              {statusBusy ? t("settings.checking") : t("settings.checkStatus")}
+            </button>
           </div>
-          {status?.connected && project?.repo_full_name && (
-            <p className="quick-action-meta">
-              {t("settings.connectedRepo")}{" "}
-              <a href={`https://github.com/${project.repo_full_name}`} target="_blank" rel="noreferrer">
-                {project.repo_full_name}
-              </a>
-            </p>
+
+          {repos && repos.length === 0 && (
+            <p className="quick-action-meta">{t("settings.notConnected")}</p>
           )}
+          {repos && repos.length > 0 && (
+            <div className="stack" style={{ marginBottom: 10 }}>
+              {repos.map((r) => (
+                <div key={r.repo_id} className="row" style={{ justifyContent: "space-between" }}>
+                  <span>
+                    <span className={`badge ${r.last_error ? "danger" : "ok"}`} style={{ marginRight: 6 }}>
+                      {r.last_error ? t("settings.connectionError") : t("settings.connected")}
+                    </span>
+                    <a href={`https://github.com/${r.repo_full_name}`} target="_blank" rel="noreferrer">
+                      {r.repo_full_name}
+                    </a>
+                    <span className="quick-action-meta" style={{ display: "block" }}>
+                      {r.last_error
+                        ? `${t("settings.error")} ${r.last_error}`
+                        : r.last_collected_at
+                          ? `${t("settings.lastCollected")} ${new Date(r.last_collected_at).toLocaleString()}`
+                          : t("settings.firstCollectWaiting")}
+                    </span>
+                  </span>
+                  <button
+                    className="danger"
+                    style={{ padding: "3px 8px", fontSize: 11.5, flexShrink: 0 }}
+                    onClick={() => handleDisconnect(r.repo_id, r.repo_full_name)}
+                  >
+                    {t("settings.disconnect")}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {myRepos && myRepos.length > 0 && (
             <select
               value=""
@@ -401,9 +450,9 @@ function SettingsTab({
                   (groups[r.owner] ??= []).push(r);
                   return groups;
                 }, {}),
-              ).map(([owner, repos]) => (
+              ).map(([owner, ownerRepos]) => (
                 <optgroup key={owner} label={owner}>
-                  {repos.map((r) => (
+                  {ownerRepos.map((r) => (
                     <option key={r.full_name} value={r.full_name}>
                       {r.full_name}
                       {r.private ? " (private)" : ""}
@@ -424,19 +473,6 @@ function SettingsTab({
               {t("settings.connectButton")}
             </button>
           </form>
-          {status?.connected && !status.last_collected_at && !status.last_error && (
-            <p className="quick-action-meta">{t("settings.firstCollectWaiting")}</p>
-          )}
-          {status?.last_collected_at && (
-            <p className="quick-action-meta">
-              {t("settings.lastCollected")} {new Date(status.last_collected_at).toLocaleString()}
-            </p>
-          )}
-          {status?.last_error && (
-            <p className="quick-action-meta" style={{ color: "var(--danger)" }}>
-              {t("settings.error")} {status.last_error}
-            </p>
-          )}
         </div>
 
         <div className="quick-action">

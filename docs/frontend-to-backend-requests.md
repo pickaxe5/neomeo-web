@@ -9,7 +9,56 @@
 
 ---
 
-## 🐛 발견한 버그 (`backend-to-frontend-requests.md` 항목 검증 중 발견, 2026-08-16)
+## 🐛 발견한 버그 (8~13번 구현 검증 중 발견, 2026-08-17)
+
+### [블로킹] 팀 없이 만든 프로젝트가 `GET /me/projects`에 안 뜸
+
+**재현**: `POST /projects`에 `team_id`를 안 넣고(8번) 프로젝트를 만들면 정상적으로 생성되고
+`is_admin: true`로 응답도 오는데(직접 `GET /projects/{id}`로 조회해도 잘 나옴), 그 직후
+`GET /me/projects`를 호출하면 방금 만든 프로젝트가 목록에 없습니다. 로컬 재현:
+
+```
+POST /projects {"name":"OrphanProject"}  →  {"id":"5b14...","is_admin":true, ...}
+GET /me/projects  →  방금 만든 프로젝트가 빠진 채로 응답
+```
+
+**원인**: `app/routers/me.py`의 `list_my_projects`가 `Project` → `ProjectTeam` → `TeamMembership`
+조인으로만 "내 프로젝트"를 찾습니다 — "내가 속한 팀이 참여 중인 프로젝트"만 세는 원래 로직인데,
+8번 항목으로 팀 없이 만든 프로젝트는 애초에 `ProjectTeam` row가 없으니 이 조인에 절대 안 걸립니다.
+결과적으로 만든 사람 본인에게조차 "내 프로젝트" 목록에서 안 보이는 상태가 됩니다 (URL을 직접
+알면 `/projects/{id}`로는 들어가지지만, 대시보드에서 찾을 방법이 없음).
+
+**제안하는 수정**: `list_my_projects`에서 "팀 참여 기반"에 더해 "내가 `project_admins`에 속한
+프로젝트"도 합집합으로 포함해주세요 (`UNION` 또는 `OR` 조건). 프로젝트 생성자는 항상
+`project_admins`에 들어가니(O-003), 이렇게 하면 8번 항목이 실사용 가능해집니다.
+
+**영향**: 8번 항목(팀 없이 프로젝트 먼저 만들기) 자체가 사실상 못 쓰는 상태입니다 — 만들어도
+대시보드에 안 보이니 사용자 입장에서는 사라진 것처럼 느껴집니다.
+
+**추가로 확인된 더 넓은 범위**: 8번(팀 없이 생성)만의 문제가 아닙니다. 참여 팀이 이미 여러 개
+있는 프로젝트라도, **관리자 본인이 속한 팀 하나만** 12번 항목("참여 팀 내보내기")으로 빠지면
+그 즉시 `GET /me/projects`에서 사라집니다 — 다른 두 팀은 여전히 참여 중이고 그 팀 멤버들에게는
+프로젝트가 잘 보이는데도요. 로컬 재현: 데모 시드 프로젝트(참여 팀 3개)에서 내가 속한 팀 1개만
+`DELETE /projects/{id}/teams/{team_id}`로 내보내면 다른 2개 팀이 남아있어도 `GET /me/projects`가
+바로 빈 배열이 됩니다. 즉 관리자가 "내 팀"을 프로젝트에서 빼는 것만으로 스스로 그 프로젝트에
+대한 접근 경로를 잃어버릴 수 있어서, 위 제안 수정(`project_admins` 합집합)이 8번뿐 아니라
+12번의 실사용성에도 필요합니다.
+
+### [블로킹] `POST /demo/seed` 두 번째 호출부터 500 에러
+
+**재현**: 로컬 Docker(빈 DB)에서 `/demo/seed`를 한 번 호출해 정상 시딩된 뒤, 같은 데모 계정으로
+`/demo/seed`를 다시 호출하면(재시딩 — 기존 데모 데이터를 지우고 새로 만드는 로직) 500이 납니다.
+
+**원인**: 로그 상 `sqlalchemy.exc.IntegrityError: ... violates foreign key constraint
+"project_repos_project_id_fkey" ... still referenced from table "project_repos"`.
+`app/seed/fake_layer0.py`의 재시딩 정리 로직이 기존 데모 프로젝트를 지우기 전에
+`RawEvent`/`SummaryCard`/`ClosureRun`/`ProjectDocument`/`ProjectTeam`/`ProjectAdmin`은 지우는데
+(11번 항목으로 새로 생긴) `ProjectRepo`는 안 지우고 있어서, `Project` 삭제 시 FK 제약에 걸립니다.
+`DELETE /projects/{id}`(3번 항목) 쪽 cascade 삭제 로직에는 이미 `ProjectRepo` 삭제가 들어가 있으니
+그거랑 똑같이 맞추면 될 것 같습니다.
+
+**영향**: 로컬 개발·데모 준비 중 재시딩이 필요할 때마다 막힙니다 (DB를 통째로 지우고 처음부터
+다시 시딩해야 우회 가능).
 
 ### [블로킹] `PATCH /teams/{team_id}/members/me` — job_role 저장 시 500 에러
 
@@ -275,6 +324,9 @@ Content-Type: application/json
 PM이 전달한 수정사항 중 백엔드 작업이 필요한 항목만 정리합니다. 나머지(타임존/국가 select화,
 팀 생성 폼 업무시간 필드 추가, 팀원 GitHub 프로필 사진)는 프론트 단독으로 처리 가능해서 이미
 `frontend` 브랜치에 반영했습니다.
+
+**8~13번 전부 백엔드 커밋 `432a368`로 구현 완료, 프론트도 전부 실제 API에 맞춰 반영·검증했습니다
+(2026-08-17).**
 
 ## 8. 프로젝트 생성 시 팀 선택을 선택사항으로
 

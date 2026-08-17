@@ -41,6 +41,7 @@ def _needs_my_response(db: Session, project_id, user_id) -> list[BriefingItem]:
             title=raw_event.title or raw_event.body or "(제목 없음)",
             url=raw_event.url,
             reason=_SIGNAL_REASON.get(item.signal_type.value, item.signal_type.value),
+            why_it_matters=item.why_it_matters,
         )
         for item, raw_event in rows
     ]

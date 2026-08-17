@@ -78,7 +78,7 @@ export function DashboardPage() {
     e.preventDefault();
     setError(null);
     try {
-      await createProject({ name: projectName, team_id: projectTeamId });
+      await createProject({ name: projectName, team_id: projectTeamId || undefined });
       setProjectName("");
       setShowProjectForm(false);
       reload();
@@ -240,16 +240,15 @@ export function DashboardPage() {
             </div>
             <div className="field">
               <label>{t("dashboard.teamSelectLabel")}</label>
-              <select value={projectTeamId} onChange={(e) => setProjectTeamId(e.target.value)} required>
-                <option value="" disabled>
-                  {t("dashboard.teamSelectPlaceholder")}
-                </option>
+              <select value={projectTeamId} onChange={(e) => setProjectTeamId(e.target.value)}>
+                <option value="">{t("dashboard.teamSelectSkip")}</option>
                 {teams?.map((t2) => (
                   <option key={t2.id} value={t2.id}>
                     {t2.name}
                   </option>
                 ))}
               </select>
+              <p className="quick-action-meta">{t("dashboard.teamSelectSkipHint")}</p>
             </div>
             <button type="submit" className="primary">
               {t("common.create")}
@@ -267,14 +266,11 @@ export function DashboardPage() {
               <Link key={p.id} to={`/projects/${p.id}`} className="entity-card">
                 <span className="entity-card-icon">{p.name.slice(0, 1)}</span>
                 <span className="entity-card-name">{p.name}</span>
-                {p.repo_full_name && <span className="entity-card-sub">{p.repo_full_name}</span>}
-                <span className="entity-card-footer">
-                  {p.repo_full_name ? (
-                    <span className="badge ok">{t("dashboard.githubConnected")}</span>
-                  ) : (
-                    <span className="badge muted">{t("dashboard.githubNotConnected")}</span>
-                  )}
-                </span>
+                {p.is_admin && (
+                  <span className="entity-card-footer">
+                    <span className="badge accent">{t("dashboard.admin")}</span>
+                  </span>
+                )}
               </Link>
             ))}
           </div>
