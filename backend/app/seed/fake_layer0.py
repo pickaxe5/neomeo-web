@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from app.core.security import hash_password
 from app.models.closure import ClosureRun, ClosureTrigger
 from app.models.github_event import EventType, RawEvent
-from app.models.project import Project, ProjectAdmin, ProjectDocument, ProjectTeam
+from app.models.project import Project, ProjectAdmin, ProjectDocument, ProjectRepo, ProjectTeam
 from app.models.summary import SummaryCard
 from app.models.team import Team, TeamMembership, TeamRole
 from app.models.user import User
@@ -147,13 +147,19 @@ def seed_demo_project(db: Session, demo_email: str, demo_password: str) -> dict:
     earliest_boundary = _work_end_utc(TEAM_DEFS[0]["timezone"], time(18, 0), date.today() - timedelta(days=DAY_OFFSETS[0]))
     project = Project(
         name=DEMO_PROJECT_NAME,
-        repo_full_name="neomeo-team/neomeo-demo",
-        repo_id="000000",
         created_at=earliest_boundary,
     )
     db.add(project)
     db.flush()
 
+    db.add(
+        ProjectRepo(
+            project_id=project.id,
+            repo_full_name="neomeo-team/neomeo-demo",
+            repo_id="000000",
+            connected_by_user_id=demo_user.id,
+        )
+    )
     db.add(ProjectAdmin(project_id=project.id, user_id=demo_user.id))
     for team in teams:
         db.add(ProjectTeam(project_id=project.id, team_id=team.id))

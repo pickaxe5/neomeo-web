@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import SessionLocal
 from app.models.closure import ClosureTrigger
-from app.models.project import Project, ProjectTeam
+from app.models.project import Project, ProjectRepo, ProjectTeam
 from app.models.team import Team
 from app.services import github_collector
 from app.services.closure_service import run_closure, should_auto_close
@@ -50,7 +50,13 @@ def _poll_project(db: Session, project: Project) -> None:
 def poll_all_projects() -> None:
     db = SessionLocal()
     try:
-        projects = db.query(Project).filter(Project.repo_full_name.isnot(None)).all()
+        # docs/frontend-to-backend-requests.md #11: 레포가 하나라도 연결된 프로젝트만 대상.
+        projects = (
+            db.query(Project)
+            .join(ProjectRepo, ProjectRepo.project_id == Project.id)
+            .distinct()
+            .all()
+        )
         for project in projects:
             _poll_project(db, project)
     finally:

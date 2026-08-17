@@ -56,6 +56,18 @@ MESSAGES: dict[str, dict[str, str]] = {
         "en": "The last team leader cannot leave. Delete the team or have another member "
         "become leader first.",
     },
+    "last_leader_cannot_be_demoted": {
+        "ko": "마지막 팀장은 강등할 수 없습니다. 다른 팀원을 먼저 팀장으로 위임해주세요.",
+        "en": "The last team leader cannot be demoted. Assign another member as leader first.",
+    },
+    "cannot_remove_self": {
+        "ko": "본인을 팀에서 내보낼 수 없습니다. 팀을 나가려면 나가기 기능을 사용해주세요.",
+        "en": "You cannot remove yourself from the team. Use the leave-team action instead.",
+    },
+    "repo_not_connected": {
+        "ko": "이 프로젝트에 연결된 레포가 아닙니다.",
+        "en": "This repo is not connected to the project.",
+    },
     "team_members_only": {
         "ko": "팀 멤버만 조회할 수 있습니다.",
         "en": "Only team members can view this.",

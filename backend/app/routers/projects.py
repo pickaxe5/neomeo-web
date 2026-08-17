@@ -6,7 +6,7 @@ from app.core.deps import get_current_user, get_optional_user, require_project_a
 from app.core.i18n import get_lang, t
 from app.models.closure import ClosureRun
 from app.models.github_event import RawEvent
-from app.models.project import Project, ProjectAdmin, ProjectDocument, ProjectTeam
+from app.models.project import Project, ProjectAdmin, ProjectDocument, ProjectRepo, ProjectTeam
 from app.models.summary import SummaryCard
 from app.models.team import Team
 from app.models.user import User
@@ -31,28 +31,28 @@ def create_project(
     lang: str = Depends(get_lang),
 ) -> ProjectOut:
     """O-003: 프로젝트 생성 및 레포 선택. 생성자의 팀이 첫 참여 팀이 되고,
-    생성자는 프로젝트 관리자가 된다."""
-    team = db.get(Team, payload.team_id)
-    if team is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, t("team_not_found", lang))
+    생성자는 프로젝트 관리자가 된다.
 
-    project = Project(
-        name=payload.name,
-        repo_full_name=payload.repo_full_name,
-        repo_id=payload.repo_id,
-    )
+    docs/frontend-to-backend-requests.md #8: team_id는 선택 입력이다. 아직 소속 팀이 없는
+    사용자도 프로젝트만 먼저 만들고, 참여 팀은 POST /projects/{id}/teams로 나중에 추가할 수 있다."""
+    team = None
+    if payload.team_id is not None:
+        team = db.get(Team, payload.team_id)
+        if team is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, t("team_not_found", lang))
+
+    project = Project(name=payload.name)
     db.add(project)
     db.flush()
 
-    db.add(ProjectTeam(project_id=project.id, team_id=team.id))
+    if team is not None:
+        db.add(ProjectTeam(project_id=project.id, team_id=team.id))
     db.add(ProjectAdmin(project_id=project.id, user_id=current_user.id))
     db.commit()
     db.refresh(project)
     return ProjectOut(
         id=project.id,
         name=project.name,
-        repo_full_name=project.repo_full_name,
-        repo_id=project.repo_id,
         created_at=project.created_at,
         is_admin=True,
     )
@@ -80,8 +80,6 @@ def get_project(
     return ProjectOut(
         id=project.id,
         name=project.name,
-        repo_full_name=project.repo_full_name,
-        repo_id=project.repo_id,
         created_at=project.created_at,
         is_admin=is_admin,
     )
@@ -111,8 +109,6 @@ def update_project(
     return ProjectOut(
         id=project.id,
         name=project.name,
-        repo_full_name=project.repo_full_name,
-        repo_id=project.repo_id,
         created_at=project.created_at,
         is_admin=True,
     )
@@ -183,6 +179,30 @@ def list_participating_teams(
     )
 
 
+@router.delete("/{project_id}/teams/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_participating_team(
+    project_id: str,
+    team_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
+) -> None:
+    """docs/frontend-to-backend-requests.md #12: 프로젝트 관리자가 참여 팀을 내보낸다.
+    프로젝트 삭제(#3)와 달리 팀·프로젝트 자체를 지우는 게 아니라 참여 관계만 끊는 것이므로,
+    그 팀이 남긴 closure_runs/summary_cards(과거 타임라인 기록)는 지우지 않고 그대로 둔다."""
+    if db.get(Project, project_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
+    if db.get(Team, team_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("team_not_found", lang))
+    require_project_admin(db, project_id, current_user, lang)
+
+    db.query(ProjectTeam).filter(
+        ProjectTeam.project_id == project_id, ProjectTeam.team_id == team_id
+    ).delete(synchronize_session=False)
+    db.commit()
+    return None
+
+
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(
     project_id: str,
@@ -210,6 +230,7 @@ def delete_project(
     db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).delete(synchronize_session=False)
     db.query(ProjectAdmin).filter(ProjectAdmin.project_id == project_id).delete(synchronize_session=False)
     db.query(ProjectTeam).filter(ProjectTeam.project_id == project_id).delete(synchronize_session=False)
+    db.query(ProjectRepo).filter(ProjectRepo.project_id == project_id).delete(synchronize_session=False)
 
     db.delete(project)
     db.commit()
