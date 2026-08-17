@@ -39,6 +39,8 @@ class ProjectDocumentOut(BaseModel):
     project_id: uuid.UUID
     content: str
     updated_at: datetime
+    # docs/frontend-to-backend-requests.md #14: 파일 업로드로 채웠을 때만 값이 있다.
+    source_filename: str | None = None
 
     model_config = {"from_attributes": True}
 

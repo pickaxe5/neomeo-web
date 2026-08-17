@@ -68,6 +68,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ko": "이 프로젝트에 연결된 레포가 아닙니다.",
         "en": "This repo is not connected to the project.",
     },
+    "document_file_too_large": {
+        "ko": "파일 크기가 너무 큽니다. 최대 {max_mb}MB까지 업로드할 수 있습니다.",
+        "en": "The file is too large. Maximum upload size is {max_mb}MB.",
+    },
     "team_members_only": {
         "ko": "팀 멤버만 조회할 수 있습니다.",
         "en": "Only team members can view this.",
