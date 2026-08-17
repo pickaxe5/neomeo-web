@@ -96,6 +96,9 @@ class ProjectDocument(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id"), unique=True)
     content: Mapped[str] = mapped_column(Text)
+    # docs/frontend-to-backend-requests.md #14: 파일 업로드로 채운 경우 원본 파일명을 참고용으로
+    # 남긴다. 텍스트 직접 입력이면 계속 null. 원본 파일 자체는 저장하지 않고 추출한 텍스트만 남긴다.
+    source_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

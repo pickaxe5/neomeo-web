@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -19,6 +19,7 @@ from app.schemas.project import (
     ProjectUpdate,
 )
 from app.schemas.team import TeamOut
+from app.services import document_extractor
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -132,6 +133,49 @@ def upsert_project_document(
         db.add(doc)
     else:
         doc.content = payload.content
+        doc.source_filename = None  # 텍스트로 직접 덮어쓰면 이전 업로드 파일명 표시는 더 이상 안 맞다
+    db.commit()
+    db.refresh(doc)
+    return doc
+
+
+@router.post("/{project_id}/document/upload", response_model=ProjectDocumentOut)
+async def upload_project_document(
+    project_id: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
+) -> ProjectDocument:
+    """docs/frontend-to-backend-requests.md #14: 기획 문서를 파일(PDF/DOCX/PPTX/TXT/MD)로
+    업로드하면 서버가 텍스트를 추출해 PUT과 동일한 project_documents.content에 저장한다.
+    원본 파일 자체는 저장하지 않고 추출된 텍스트만 남긴다."""
+    if db.get(Project, project_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
+
+    data = await file.read()
+    if len(data) > document_extractor.MAX_UPLOAD_SIZE_BYTES:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            t(
+                "document_file_too_large",
+                lang,
+                max_mb=document_extractor.MAX_UPLOAD_SIZE_BYTES // (1024 * 1024),
+            ),
+        )
+
+    try:
+        content = document_extractor.extract_text(file.filename or "", data)
+    except document_extractor.DocumentExtractionError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
+
+    doc = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).first()
+    if doc is None:
+        doc = ProjectDocument(project_id=project_id, content=content, source_filename=file.filename)
+        db.add(doc)
+    else:
+        doc.content = content
+        doc.source_filename = file.filename
     db.commit()
     db.refresh(doc)
     return doc
