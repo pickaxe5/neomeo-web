@@ -43,7 +43,7 @@ def health() -> dict:
     return {"status": "ok"}
 
 
-_dist = Path(__file__).parent.parent.parent / "frontend" / "dist"
+_dist = (Path(__file__).parent.parent.parent / "frontend" / "dist").resolve()
 if _dist.exists():
     from fastapi.responses import FileResponse
 
@@ -51,7 +51,10 @@ if _dist.exists():
 
     @app.get("/{full_path:path}", include_in_schema=False)
     async def serve_spa(full_path: str):
-        target = _dist / full_path
-        if target.is_file():
+        # full_path는 사용자가 URL로 직접 조작 가능한 값이라, "../"를 검증 없이 그대로
+        # 이어붙이면 dist 밖(백엔드 소스, .env 등)을 읽어버리는 경로 순회 취약점이 된다.
+        # resolve() 후 dist 하위인지 반드시 확인한다.
+        target = (_dist / full_path).resolve()
+        if target.is_relative_to(_dist) and target.is_file():
             return FileResponse(str(target))
         return FileResponse(str(_dist / "index.html"))
