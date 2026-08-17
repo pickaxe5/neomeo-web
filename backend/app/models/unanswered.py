@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, UniqueConstraint, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -44,6 +44,9 @@ class UnansweredItem(Base):
     signal_type: Mapped[UnansweredSignal] = mapped_column(Enum(UnansweredSignal, values_callable=str_enum_values))
 
     detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    # 브리핑 1단계에 AI가 "왜 중요한지" 한 줄 설명을 붙이기 위한 필드. summary_cards.content와
+    # 같은 패턴 — 백엔드는 비워둔 채로 만들고, AI 파트가 IS NULL인 행을 찾아 채운다.
+    why_it_matters: Mapped[str | None] = mapped_column(Text, nullable=True)
     resolved: Mapped[bool] = mapped_column(default=False)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # 기능명세서 7.2: 오프라인으로 해결해 본인이 직접 완료 처리한 경우 True. 이후
