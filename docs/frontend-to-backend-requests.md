@@ -35,49 +35,6 @@ enum_cls]))`처럼 `values_callable`을 지정해주면 해결될 것 같습니�
 **영향**: 지금 프론트는 프로젝트 생성 직후 `/me/projects`를 다시 불러오는 흐름이라 실사용에 문제는
 없지만, 나중에 생성 응답을 바로 쓰는 화면이 생기면 문제가 됩니다.
 
-### [블로킹] 새로고침하면 화면 대신 원본 JSON이 그대로 노출됨 (`/projects/{id}`, `/teams/{id}`, 2026-08-17 발견)
-
-**재현**: 로그인 후 프로젝트 상세(`/projects/{id}`) 또는 팀 상세(`/teams/{id}`) 화면에서 새로고침(F5)하면
-화면이 까맣게 변하면서 아래처럼 원본 JSON이 그대로 표시됩니다.
-
-```json
-{"id":"fb426146-a02f-4fc1-90d5-a211057a5410","name":"프로1","repo_full_name":null,"repo_id":null,"created_at":"2026-08-17T04:27:41.124198Z","is_admin":false}
-```
-
-**원인으로 보이는 것**: 단일 서비스 배포(`neomeo.semo3.com`)에서는 프론트 SPA 정적 파일과 백엔드 API를
-같은 FastAPI 앱이 서빙합니다. 그런데 프론트 클라이언트 라우트 `/projects/:projectId`, `/teams/:teamId`가
-백엔드 API 엔드포인트 `GET /projects/{project_id}`, `GET /teams/{team_id}`와 경로가 완전히 같습니다.
-새로고침으로 브라우저가 그 URL로 새 GET 요청을 보내면, `backend/app/main.py`의 SPA catch-all 라우트
-(`@app.get("/{full_path:path}")`)보다 `projects.router`/`teams.router`가 먼저 등록돼 있어서 API 라우트가
-먼저 매칭되고, `index.html` 대신 API JSON이 그대로 응답됩니다. Render처럼 프론트·백엔드가 분리 배포된
-환경이나 로컬에서 `vite dev`로 따로 띄운 환경에서는 애초에 같은 서버가 두 역할을 다 하지 않으므로
-재현되지 않고, 단일 서비스 배포에서만 나타납니다.
-
-**제안하는 수정 방향** (로컬 Docker에서 재현·검증까지 해봤습니다): GET 요청의 `Accept` 헤더에
-`text/html`이 포함된 경우(=브라우저가 주소창 이동·새로고침으로 페이지를 직접 요청하는 경우)에는
-`/projects/*`, `/teams/*` 경로라도 API 라우터보다 먼저 SPA `index.html`을 돌려주는 미들웨어를 추가하면
-됩니다. 프론트 내부 `fetch()` 호출은 `Accept: text/html`을 보내지 않으므로(기본값 `*/*`) 영향 없이 그대로
-API로 갑니다.
-
-```python
-# app.include_router(...) 호출들보다 위, _dist.exists() 블록 안에 추가
-_SPA_COLLIDING_PREFIXES = ("/projects/", "/teams/")
-
-@app.middleware("http")
-async def spa_navigation_override(request: Request, call_next):
-    if (
-        request.method == "GET"
-        and request.url.path.startswith(_SPA_COLLIDING_PREFIXES)
-        and "text/html" in request.headers.get("accept", "")
-    ):
-        return FileResponse(str(_dist / "index.html"))
-    return await call_next(request)
-```
-
-**영향**: 단일 서비스로 배포된 프로덕션(`neomeo.semo3.com`)에서 프로젝트·팀 상세 화면에 들어갈 때마다
-(새로고침, 북마크, 링크 공유로 바로 접속 등) 매번 발생합니다. 새로고침이 사실상 불가능한 상태라 체감
-임팩트가 큽니다.
-
 ---
 
 ## 1. 내 GitHub 레포 목록 조회
