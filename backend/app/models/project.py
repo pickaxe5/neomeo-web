@@ -15,21 +15,36 @@ class Project(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255))
 
-    # 프로젝트당 레포 1개 (명시적 제외: 멀티 레포)
-    repo_full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)  # "owner/repo"
-    repo_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
-
-    # 이 프로젝트의 GitHub 수집에 쓸 토큰의 소유자 (레포를 연동한 프로젝트 관리자)
-    github_connected_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("users.id"), nullable=True
-    )
-    gh_last_collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    gh_last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
-
     # D-003: 설정되어 있으면 자동 마감 워커가 실제 시각 대신 이 값을 "지금"으로 취급한다.
     simulated_now: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    repos: Mapped[list["ProjectRepo"]] = relationship(back_populates="project")
+
+
+class ProjectRepo(Base):
+    """docs/frontend-to-backend-requests.md #11: 프로젝트당 GitHub 레포 다중 연결 (1:N).
+    레포 하나는 프로젝트 하나에만 속한다 — 여러 프로젝트가 레포를 공유하는 N:N 시나리오는
+    요청받은 적이 없어 다루지 않는다."""
+
+    __tablename__ = "project_repos"
+    __table_args__ = (UniqueConstraint("project_id", "repo_id", name="uq_project_repo"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("projects.id"))
+
+    repo_full_name: Mapped[str] = mapped_column(String(255))  # "owner/repo"
+    repo_id: Mapped[str] = mapped_column(String(64))  # GitHub 상의 레포 ID (검증 시 서버가 채움)
+
+    # 이 레포의 GitHub 수집에 쓸 토큰의 소유자 (레포를 연동한 사용자)
+    connected_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"))
+    gh_last_collected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    gh_last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    project: Mapped["Project"] = relationship(back_populates="repos")
 
 
 class ProjectTeam(Base):

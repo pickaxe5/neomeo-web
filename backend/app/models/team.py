@@ -23,6 +23,9 @@ class JobRole(str, enum.Enum):
     AI = "ai"
     DESIGN = "design"
     PLANNING = "planning"
+    # docs/frontend-to-backend-requests.md #10: 다섯 개 역할에 안 맞는 경우(PM, QA 등)를 위한
+    # 탈출구. CUSTOM일 때만 TeamMembership.job_role_label에 자유 텍스트를 함께 저장한다.
+    CUSTOM = "custom"
 
 
 class Team(Base):
@@ -55,6 +58,8 @@ class TeamMembership(Base):
     job_role: Mapped[JobRole | None] = mapped_column(
         Enum(JobRole, values_callable=str_enum_values), nullable=True
     )
+    # job_role이 CUSTOM일 때만 쓰이는 자유 텍스트 (예: "PM", "QA"). 그 외에는 비워둔다.
+    job_role_label: Mapped[str | None] = mapped_column(String(100), nullable=True)
     assigned_area: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # 커밋 변경 파일 경로로부터 추론한 주요 디렉토리 목록. 사용자가 직접 확정하기 전까지는
     # 조회 시점마다 최신 활동 기준으로 다시 계산해 갱신한다.

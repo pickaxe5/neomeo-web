@@ -12,14 +12,16 @@ class GithubConnectResult(BaseModel):
     project_id: uuid.UUID
     connected: bool
     repo_id: str
+    repo_full_name: str
     backfill_event_count: int
 
 
-class GithubStatusOut(BaseModel):
-    """G-006: 마지막 수집 시각과 실패 여부 표시."""
+class GithubRepoStatusOut(BaseModel):
+    """G-006: 연결된 레포 1개의 마지막 수집 시각·실패 여부.
+    docs/frontend-to-backend-requests.md #11: 프로젝트당 여러 개 연결 가능해 목록으로 내려준다."""
 
-    project_id: uuid.UUID
-    connected: bool
+    repo_id: str
+    repo_full_name: str
     last_collected_at: datetime | None
     last_error: str | None
 

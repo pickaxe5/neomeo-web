@@ -68,8 +68,6 @@ def list_my_projects(
         MyProjectOut(
             id=p.id,
             name=p.name,
-            repo_full_name=p.repo_full_name,
-            repo_id=p.repo_id,
             created_at=p.created_at,
             is_admin=p.id in admin_project_ids,
         )

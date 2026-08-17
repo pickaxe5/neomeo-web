@@ -8,9 +8,16 @@ from app.models.closure import ClosureRun
 from app.models.github_event import RawEvent
 from app.models.project import ProjectTeam
 from app.models.summary import SummaryCard
-from app.models.team import InviteLink, Team, TeamMembership, TeamRole
+from app.models.team import InviteLink, JobRole, Team, TeamMembership, TeamRole
 from app.models.user import User
-from app.schemas.team import MyAssignmentUpdate, TeamCreate, TeamMemberOut, TeamOut, TeamUpdate
+from app.schemas.team import (
+    MemberRoleUpdate,
+    MyAssignmentUpdate,
+    TeamCreate,
+    TeamMemberOut,
+    TeamOut,
+    TeamUpdate,
+)
 from app.services.assignment_service import refresh_unconfirmed_assignments
 
 router = APIRouter(prefix="/teams", tags=["teams"])
@@ -171,6 +178,7 @@ def list_team_members(
             github_handle=user.github_handle,
             role=membership.role,
             job_role=membership.job_role,
+            job_role_label=membership.job_role_label,
             assigned_area=membership.assigned_area,
             assigned_paths=membership.assigned_paths,
             assigned_area_confirmed=membership.assigned_area_confirmed,
@@ -199,6 +207,10 @@ def update_my_assignment(
 
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(membership, field, value)
+    # job_role_label은 CUSTOM일 때만 의미가 있다 — 다른 역할로 바뀌면 이전 자유 텍스트가
+    # 남아있지 않도록 같이 비운다.
+    if membership.job_role != JobRole.CUSTOM:
+        membership.job_role_label = None
     membership.assigned_area_confirmed = True
     db.commit()
     db.refresh(membership)
@@ -209,7 +221,95 @@ def update_my_assignment(
         github_handle=current_user.github_handle,
         role=membership.role,
         job_role=membership.job_role,
+        job_role_label=membership.job_role_label,
         assigned_area=membership.assigned_area,
         assigned_paths=membership.assigned_paths,
         assigned_area_confirmed=membership.assigned_area_confirmed,
     )
+
+
+@router.patch("/{team_id}/members/{user_id}/role", response_model=TeamMemberOut)
+def update_member_role(
+    team_id: str,
+    user_id: str,
+    payload: MemberRoleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
+) -> TeamMemberOut:
+    """docs/frontend-to-backend-requests.md #9A: 팀장이 팀원의 역할(리더/멤버)을 바꾼다 —
+    리더 위임, 또는 본인 포함 리더의 자진 강등에 쓰인다. 강등 후에도 팀에 리더가 최소 1명
+    남아있어야 한다 (팀 나가기의 "마지막 리더" 제약과 같은 원칙)."""
+    team = db.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("team_not_found", lang))
+    require_team_leader(db, team_id, current_user, lang)
+
+    membership = (
+        db.query(TeamMembership)
+        .filter(TeamMembership.team_id == team_id, TeamMembership.user_id == user_id)
+        .first()
+    )
+    if membership is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("not_team_member", lang))
+
+    if membership.role == TeamRole.LEADER and payload.role == TeamRole.MEMBER:
+        other_leader_exists = (
+            db.query(TeamMembership)
+            .filter(
+                TeamMembership.team_id == team_id,
+                TeamMembership.role == TeamRole.LEADER,
+                TeamMembership.user_id != membership.user_id,
+            )
+            .first()
+            is not None
+        )
+        if not other_leader_exists:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, t("last_leader_cannot_be_demoted", lang))
+
+    membership.role = payload.role
+    db.commit()
+    db.refresh(membership)
+
+    user = db.get(User, user_id)
+    return TeamMemberOut(
+        user_id=membership.user_id,
+        name=user.name if user else None,
+        github_handle=user.github_handle if user else None,
+        role=membership.role,
+        job_role=membership.job_role,
+        job_role_label=membership.job_role_label,
+        assigned_area=membership.assigned_area,
+        assigned_paths=membership.assigned_paths,
+        assigned_area_confirmed=membership.assigned_area_confirmed,
+    )
+
+
+@router.delete("/{team_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_member(
+    team_id: str,
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
+) -> None:
+    """docs/frontend-to-backend-requests.md #9B: 팀장이 다른 팀원을 팀에서 내보낸다.
+    본인을 대상으로 하면 400 — 본인 탈퇴는 POST /{team_id}/leave를 쓴다."""
+    team = db.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("team_not_found", lang))
+    require_team_leader(db, team_id, current_user, lang)
+
+    membership = (
+        db.query(TeamMembership)
+        .filter(TeamMembership.team_id == team_id, TeamMembership.user_id == user_id)
+        .first()
+    )
+    if membership is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("not_team_member", lang))
+    if membership.user_id == current_user.id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, t("cannot_remove_self", lang))
+
+    db.delete(membership)
+    db.commit()
+    return None

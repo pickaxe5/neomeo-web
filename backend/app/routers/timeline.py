@@ -5,15 +5,48 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, require_team_leader
 from app.core.i18n import get_lang, t
 from app.models.closure import ClosureRun, ClosureTrigger
-from app.models.github_event import RawEvent
+from app.models.github_event import EventType, RawEvent
 from app.models.project import Project
 from app.models.summary import SummaryCard
 from app.models.team import Team
 from app.models.user import User
-from app.schemas.timeline import ClosureTriggerRequest, TimelineCardOut
+from app.schemas.timeline import ClosureTriggerRequest, TimelineCardOut, TimelineSourceEvent
 from app.services.closure_service import run_closure
 
 router = APIRouter(prefix="/projects/{project_id}", tags=["timeline"])
+
+_EVENT_TYPE_LABELS = {
+    EventType.PR: "pull_request",
+    EventType.ISSUE: "issue",
+    EventType.REVIEW_COMMENT: "review_comment",
+    EventType.COMMIT: "commit",
+}
+
+
+def _source_events_for_closure(db: Session, closure_run: ClosureRun) -> list[TimelineSourceEvent]:
+    """docs/frontend-to-backend-requests.md #13: closure_run 구간에 속한 raw_events를
+    발생 순으로 구조화된 로그 항목으로 변환한다."""
+    events = (
+        db.query(RawEvent)
+        .filter(
+            RawEvent.project_id == closure_run.project_id,
+            RawEvent.team_id == closure_run.team_id,
+            RawEvent.gh_created_at >= closure_run.range_start,
+            RawEvent.gh_created_at < closure_run.range_end,
+        )
+        .order_by(RawEvent.gh_created_at.asc())
+        .all()
+    )
+    return [
+        TimelineSourceEvent(
+            type=_EVENT_TYPE_LABELS.get(event.type, event.type.value),
+            title=event.title or event.body or "(제목 없음)",
+            author=event.actor_handle,
+            url=event.url,
+            occurred_at=event.gh_created_at,
+        )
+        for event in events
+    ]
 
 
 @router.get("/timeline", response_model=list[TimelineCardOut])
@@ -35,18 +68,7 @@ def get_timeline(
 
     cards: list[TimelineCardOut] = []
     for closure_run, summary_card in rows:
-        source_urls = [
-            url
-            for (url,) in db.query(RawEvent.url)
-            .filter(
-                RawEvent.project_id == closure_run.project_id,
-                RawEvent.team_id == closure_run.team_id,
-                RawEvent.gh_created_at >= closure_run.range_start,
-                RawEvent.gh_created_at < closure_run.range_end,
-            )
-            .distinct()
-            .all()
-        ]
+        source_events = _source_events_for_closure(db, closure_run)
         cards.append(
             TimelineCardOut(
                 closure_run_id=closure_run.id,
@@ -57,7 +79,8 @@ def get_timeline(
                 language=summary_card.language,
                 content=summary_card.content,
                 status=summary_card.status,
-                source_event_urls=source_urls,
+                source_event_urls=list(dict.fromkeys(e.url for e in source_events)),
+                source_events=source_events,
             )
         )
     return cards
@@ -91,6 +114,7 @@ def trigger_manual_closure(
     if card is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, t("language_card_not_found", lang, language=language))
 
+    source_events = _source_events_for_closure(db, closure_run)
     return TimelineCardOut(
         closure_run_id=closure_run.id,
         team_id=closure_run.team_id,
@@ -100,5 +124,6 @@ def trigger_manual_closure(
         language=card.language,
         content=card.content,
         status=card.status,
-        source_event_urls=[],
+        source_event_urls=list(dict.fromkeys(e.url for e in source_events)),
+        source_events=source_events,
     )
