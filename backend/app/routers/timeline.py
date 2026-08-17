@@ -44,6 +44,7 @@ def get_timeline(
                 RawEvent.gh_created_at >= closure_run.range_start,
                 RawEvent.gh_created_at < closure_run.range_end,
             )
+            .distinct()
             .all()
         ]
         cards.append(
