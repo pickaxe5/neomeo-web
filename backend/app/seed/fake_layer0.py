@@ -96,6 +96,8 @@ def _reset_previous_demo_data(db: Session) -> None:
         db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).delete()
         db.query(ProjectTeam).filter(ProjectTeam.project_id == project_id).delete()
         db.query(ProjectAdmin).filter(ProjectAdmin.project_id == project_id).delete()
+        # 11번(레포 다중 연결)으로 생긴 project_repos도 지워야 Project 삭제 시 FK 위반이 안 난다.
+        db.query(ProjectRepo).filter(ProjectRepo.project_id == project_id).delete()
         db.query(Project).filter(Project.id == project_id).delete()
 
     team_ids = [m.team_id for m in db.query(TeamMembership).filter(TeamMembership.user_id == demo_user.id).all()]
