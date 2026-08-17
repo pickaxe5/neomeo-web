@@ -143,17 +143,23 @@ export function TeamPage() {
   }
 
   async function handleTransferLeader(targetUserId: string, targetName: string) {
-    if (!teamId) return;
+    if (!teamId || !user) return;
     if (!window.confirm(t("team.transferLeaderConfirm", { name: targetName }))) return;
     setError(null);
     setBusy(true);
     try {
+      // "위임"은 대상을 리더로 올리는 것과 내가 리더에서 내려오는 것, 두 번의 역할 변경으로
+      // 이뤄진다. 순서가 중요하다 — 먼저 대상을 리더로 올려 리더가 2명이 된 상태를 만들어야,
+      // 내가 스스로를 내릴 때 "마지막 리더는 내려올 수 없다" 제약에 걸리지 않는다.
       await updateMemberRole(teamId, targetUserId, { role: "leader" });
+      await updateMemberRole(teamId, user.id, { role: "member" });
       const rows = await fetchTeamMembers(teamId);
       setMembers(rows);
       setMyRole("member");
     } catch (err) {
       setError(errorMessage(err));
+      const rows = await fetchTeamMembers(teamId).catch(() => null);
+      if (rows) setMembers(rows);
     } finally {
       setBusy(false);
     }
