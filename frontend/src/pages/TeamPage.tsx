@@ -13,6 +13,8 @@ import { fetchMyTeams } from "../api/me";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../i18n/LanguageContext";
 import { JOB_ROLE_OPTIONS, jobRoleKey } from "../lib/jobRole";
+import { COUNTRY_CODES, countryLabel } from "../lib/countries";
+import { listTimezones } from "../lib/timezones";
 import type { TeamOut, TeamRole, TeamMemberOut, JobRole } from "../types/api";
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
 
@@ -20,7 +22,8 @@ export function TeamPage() {
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const timezoneOptions = listTimezones();
   const [team, setTeam] = useState<TeamOut | null>(null);
   const [myRole, setMyRole] = useState<TeamRole | null>(null);
   const [members, setMembers] = useState<TeamMemberOut[] | null>(null);
@@ -165,17 +168,30 @@ export function TeamPage() {
             </div>
             <div className="field">
               <label>{t("team.timezone")}</label>
-              <input
+              <select
                 value={form.timezone ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, timezone: e.target.value }))}
-              />
+              >
+                {timezoneOptions.map((tz) => (
+                  <option key={tz} value={tz}>
+                    {tz}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="field">
               <label>{t("team.country")}</label>
-              <input
+              <select
                 value={form.country ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
-              />
+              >
+                <option value="">{t("common.none")}</option>
+                {COUNTRY_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {countryLabel(code, lang)}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="row">
               <div className="field" style={{ flex: 1 }}>
@@ -244,9 +260,15 @@ export function TeamPage() {
                     : null);
                 return (
                   <div key={m.user_id} className="list-row" style={{ cursor: "default" }}>
-                    <span className="list-row-icon">
-                      {(m.github_handle ?? m.name ?? "?").slice(0, 1).toUpperCase()}
-                    </span>
+                    {m.github_handle ? (
+                      <img
+                        className="list-row-icon list-row-avatar"
+                        src={`https://github.com/${m.github_handle}.png?size=64`}
+                        alt=""
+                      />
+                    ) : (
+                      <span className="list-row-icon">{(m.name ?? "?").slice(0, 1).toUpperCase()}</span>
+                    )}
                     <span className="list-row-main">
                       <span className="name">
                         {m.github_handle ? `@${m.github_handle}` : m.name ?? t("team.noName")}

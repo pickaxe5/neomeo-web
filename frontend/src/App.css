@@ -330,6 +330,10 @@
   font-size: 13px;
   font-weight: 700;
 }
+.list-row-avatar {
+  object-fit: cover;
+  background: var(--bg-soft);
+}
 .list-row-main {
   flex: 1;
   min-width: 0;

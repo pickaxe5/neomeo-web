@@ -8,6 +8,8 @@ import { useAuth } from "../context/AuthContext";
 import type { MyProjectOut, MyTeamOut } from "../types/api";
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
 import { TeamStatusBar } from "../components/TeamStatusBar";
+import { COUNTRY_CODES, countryLabel } from "../lib/countries";
+import { listTimezones } from "../lib/timezones";
 
 const INTRO_DISMISSED_KEY = "neomeo_dashboard_intro_dismissed";
 
@@ -19,7 +21,7 @@ function greetingKey(hour: number): string {
 }
 
 export function DashboardPage() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { user } = useAuth();
   const [teams, setTeams] = useState<MyTeamOut[] | null>(null);
   const [projects, setProjects] = useState<MyProjectOut[] | null>(null);
@@ -37,6 +39,9 @@ export function DashboardPage() {
   const [teamTimezone, setTeamTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [teamCountry, setTeamCountry] = useState("");
   const [teamLanguage, setTeamLanguage] = useState<"ko" | "en">("ko");
+  const [teamWorkStart, setTeamWorkStart] = useState("09:00");
+  const [teamWorkEnd, setTeamWorkEnd] = useState("18:00");
+  const timezoneOptions = listTimezones();
 
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectName, setProjectName] = useState("");
@@ -57,6 +62,8 @@ export function DashboardPage() {
         name: teamName,
         timezone: teamTimezone,
         country: teamCountry || undefined,
+        work_start: teamWorkStart,
+        work_end: teamWorkEnd,
         default_language: teamLanguage,
       });
       setTeamName("");
@@ -141,11 +148,44 @@ export function DashboardPage() {
             </div>
             <div className="field">
               <label>{t("dashboard.timezoneLabel")}</label>
-              <input value={teamTimezone} onChange={(e) => setTeamTimezone(e.target.value)} required />
+              <select value={teamTimezone} onChange={(e) => setTeamTimezone(e.target.value)} required>
+                {timezoneOptions.map((tz) => (
+                  <option key={tz} value={tz}>
+                    {tz}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="field">
               <label>{t("dashboard.countryLabel")}</label>
-              <input value={teamCountry} onChange={(e) => setTeamCountry(e.target.value)} />
+              <select value={teamCountry} onChange={(e) => setTeamCountry(e.target.value)}>
+                <option value="">{t("common.none")}</option>
+                {COUNTRY_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {countryLabel(code, lang)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="row">
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t("team.workStart")}</label>
+                <input
+                  type="time"
+                  value={teamWorkStart}
+                  onChange={(e) => setTeamWorkStart(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t("team.workEnd")}</label>
+                <input
+                  type="time"
+                  value={teamWorkEnd}
+                  onChange={(e) => setTeamWorkEnd(e.target.value)}
+                  required
+                />
+              </div>
             </div>
             <div className="field">
               <label>{t("dashboard.defaultLanguageLabel")}</label>
