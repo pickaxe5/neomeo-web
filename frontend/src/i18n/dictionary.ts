@@ -19,6 +19,7 @@ export const dictionary: Record<Lang, Record<string, string>> = {
     "common.leader": "리더",
     "common.member": "멤버",
     "common.unknownError": "알 수 없는 오류가 발생했습니다.",
+    "common.none": "선택 안 함",
 
     "login.title": "너머에 로그인",
     "login.subtitle": "시차를 넘어 팀의 하루를 이어주는 비동기 인수인계 레이어",
@@ -309,6 +310,7 @@ export const dictionary: Record<Lang, Record<string, string>> = {
     "common.leader": "Leader",
     "common.member": "Member",
     "common.unknownError": "Something went wrong.",
+    "common.none": "None",
 
     "login.title": "Log in to neomeo",
     "login.subtitle": "The async handoff layer that bridges your team's end of day across time zones.",
