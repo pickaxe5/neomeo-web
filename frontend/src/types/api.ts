@@ -89,6 +89,7 @@ export interface ProjectDocumentOut {
   project_id: string;
   content: string;
   updated_at: string;
+  source_filename?: string | null;
 }
 
 export type JobRole = "frontend" | "backend" | "ai" | "design" | "planning" | "custom";

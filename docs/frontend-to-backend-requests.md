@@ -462,3 +462,42 @@ Authorization: Bearer <access_token>
 
 **프론트 쪽 연동 지점**: `frontend/src/components/TimelineCard.tsx` — 지금 URL만 나열하는 "sources"
 영역을 이벤트 타입 아이콘 + 제목 + 작성자 + 시각이 있는 로그 리스트로 바꿀 예정입니다.
+
+---
+
+## 14. 기획 문서 파일 업로드 (2026-08-17 PM 요청)
+
+**배경**: 프로젝트 설정의 "기획 문서 (AI 컨텍스트)" 항목이 지금은 텍스트 입력만 됩니다
+(`PUT /projects/{id}/document`, `{content: string}`). PM 요청은 텍스트 직접 입력뿐 아니라
+**내 컴퓨터에서 파일을 업로드**해서 기획 문서로 쓸 수 있게 해달라는 내용입니다.
+
+**요청하는 엔드포인트(초안)**:
+
+```
+POST /projects/{project_id}/document/upload
+Content-Type: multipart/form-data
+필드: file (PDF / DOCX / TXT / Markdown 중 하나)
+
+응답 200:
+{
+  "project_id": "...",
+  "content": "파일에서 추출한 텍스트",
+  "updated_at": "...",
+  "source_filename": "기획서.pdf"
+}
+```
+
+기존 `PUT /projects/{id}/document`(텍스트 직접 입력)는 그대로 유지하고, 이 엔드포인트는 별도
+추가 형태를 제안합니다. 둘 다 결국 같은 `project_documents.content`를 덮어쓰는 거라, 파일이 오면
+서버에서 텍스트를 추출해 `content`에 저장해주시면 됩니다 (PDF/DOCX 파싱 라이브러리 필요 —
+Python이면 `pypdf`/`python-docx` 정도로 충분할 것 같습니다).
+
+**확인 필요한 것**:
+- 지원 파일 형식/최대 용량 제한을 어디까지 둘지
+- 원본 파일 자체도 저장(다운로드용)할지, 아니면 텍스트만 추출하고 파일은 버릴지
+- 파싱 실패 시(스캔본 PDF 등 텍스트 추출이 안 되는 경우) 에러 응답 형식
+
+**프론트 쪽 연동 지점**: `frontend/src/api/projects.ts`의 `uploadProjectDocumentFile()`,
+`frontend/src/pages/ProjectPage.tsx`의 기획 문서 카드 — 파일 선택 UI는 이미 만들어뒀고
+(`multipart/form-data`로 POST 하도록 구현), 엔드포인트가 없어서 지금은 호출하면 404가 납니다.
+백엔드 구현되면 프론트 추가 작업 없이 바로 동작합니다.

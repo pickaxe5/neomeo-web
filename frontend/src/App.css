@@ -448,6 +448,38 @@
   margin: 6px 2px 0;
 }
 
+.doc-upload {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.doc-upload > label {
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+.doc-upload .hint {
+  margin-bottom: 10px;
+}
+.file-picker {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  background: var(--card-bg);
+  color: var(--text-dim);
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.file-picker input[type="file"] {
+  display: none;
+}
+
 .intro-banner {
   display: flex;
   align-items: flex-start;

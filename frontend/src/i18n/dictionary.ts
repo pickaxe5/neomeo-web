@@ -131,6 +131,12 @@ export const dictionary: Record<Lang, Record<string, string>> = {
     "settings.planningDoc": "기획 문서 (AI 컨텍스트)",
     "settings.planningDocPlaceholder":
       "프로젝트 배경, 목표 등을 입력하면 카드 생성 품질에 활용됩니다.",
+    "settings.planningDocUploadLabel": "또는 파일 업로드",
+    "settings.planningDocUploadHint": "PDF, DOCX, TXT, Markdown 파일을 올리면 내용을 추출해 기획 문서로 저장합니다.",
+    "settings.planningDocChooseFile": "파일 선택",
+    "settings.planningDocNoFile": "선택된 파일 없음",
+    "settings.planningDocUploadButton": "업로드",
+    "settings.planningDocUploading": "업로드 중...",
     "settings.deleteSection": "삭제",
     "settings.deleteProjectTitle": "프로젝트 삭제",
     "settings.deleteProjectDesc":
@@ -442,6 +448,12 @@ export const dictionary: Record<Lang, Record<string, string>> = {
     "settings.planningDoc": "Planning doc (AI context)",
     "settings.planningDocPlaceholder":
       "Add project background and goals to improve card generation quality.",
+    "settings.planningDocUploadLabel": "Or upload a file",
+    "settings.planningDocUploadHint": "Upload a PDF, DOCX, TXT, or Markdown file and its content will be extracted and saved as the planning doc.",
+    "settings.planningDocChooseFile": "Choose file",
+    "settings.planningDocNoFile": "No file selected",
+    "settings.planningDocUploadButton": "Upload",
+    "settings.planningDocUploading": "Uploading...",
     "settings.deleteSection": "Delete",
     "settings.deleteProjectTitle": "Delete project",
     "settings.deleteProjectDesc":

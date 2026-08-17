@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, apiUpload } from "./client";
 import type {
   ProjectOut,
   ProjectCreate,
@@ -26,6 +26,14 @@ export function putProjectDocument(projectId: string, content: string) {
     method: "PUT",
     body: { content },
   });
+}
+
+// Speculative — not yet implemented on the backend. See
+// docs/frontend-to-backend-requests.md for the requested contract.
+export function uploadProjectDocumentFile(projectId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiUpload<ProjectDocumentOut>(`/projects/${projectId}/document/upload`, formData);
 }
 
 export function addParticipatingTeam(projectId: string, teamId: string) {

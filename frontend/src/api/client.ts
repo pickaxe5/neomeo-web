@@ -91,19 +91,7 @@ async function rawRequest(path: string, options: RequestOptions, accessToken: st
   });
 }
 
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const auth = options.auth ?? true;
-  let accessToken = auth ? tokenStorage.getAccessToken() : null;
-
-  let res = await rawRequest(path, options, accessToken);
-
-  if (res.status === 401 && auth) {
-    const newToken = await refreshAccessToken();
-    if (newToken) {
-      res = await rawRequest(path, options, newToken);
-    }
-  }
-
+async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let body: unknown = null;
     try {
@@ -122,4 +110,45 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     return undefined as T;
   }
   return (await res.json()) as T;
+}
+
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const auth = options.auth ?? true;
+  let accessToken = auth ? tokenStorage.getAccessToken() : null;
+
+  let res = await rawRequest(path, options, accessToken);
+
+  if (res.status === 401 && auth) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      res = await rawRequest(path, options, newToken);
+    }
+  }
+
+  return handleResponse<T>(res);
+}
+
+// For multipart file uploads — the browser must set its own
+// Content-Type (with boundary), so this bypasses rawRequest's
+// JSON-only header handling instead of sharing it.
+async function rawUpload(path: string, formData: FormData, accessToken: string | null): Promise<Response> {
+  const headers: Record<string, string> = { "Accept-Language": currentLang };
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+  }
+  return fetch(buildUrl(path), { method: "POST", headers, body: formData });
+}
+
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  let accessToken = tokenStorage.getAccessToken();
+  let res = await rawUpload(path, formData, accessToken);
+
+  if (res.status === 401) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      res = await rawUpload(path, formData, newToken);
+    }
+  }
+
+  return handleResponse<T>(res);
 }

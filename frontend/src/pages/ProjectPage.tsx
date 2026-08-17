@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   fetchProject,
   putProjectDocument,
+  uploadProjectDocumentFile,
   addParticipatingTeam,
   fetchParticipatingTeams,
   removeParticipatingTeam,
@@ -180,6 +181,8 @@ function SettingsTab({
   const [repoFullName, setRepoFullName] = useState("");
   const [myRepos, setMyRepos] = useState<GithubRepoOut[] | null>(null);
   const [docContent, setDocContent] = useState("");
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
   const [teams, setTeams] = useState<MyTeamOut[]>([]);
   const [addTeamId, setAddTeamId] = useState("");
   const [participatingTeams, setParticipatingTeams] = useState<ParticipatingTeamOut[] | null>(null);
@@ -295,6 +298,23 @@ function SettingsTab({
       setMessage(t("settings.savedDocMessage"));
     } catch (err) {
       setError(errorMessage(err));
+    }
+  }
+
+  async function handleUploadDocument(e: React.FormEvent) {
+    e.preventDefault();
+    if (!docFile) return;
+    setError(null);
+    setUploadingDoc(true);
+    try {
+      const updated = await uploadProjectDocumentFile(projectId, docFile);
+      setDocContent(updated.content);
+      setDocFile(null);
+      setMessage(t("settings.savedDocMessage"));
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setUploadingDoc(false);
     }
   }
 
@@ -519,6 +539,24 @@ function SettingsTab({
           />
           <button type="submit">{t("common.save")}</button>
         </form>
+
+        <div className="doc-upload">
+          <label>{t("settings.planningDocUploadLabel")}</label>
+          <p className="hint">{t("settings.planningDocUploadHint")}</p>
+          <form onSubmit={handleUploadDocument} className="inline-form">
+            <label className="file-picker">
+              {docFile ? docFile.name : t("settings.planningDocNoFile")}
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.txt,.md"
+                onChange={(e) => setDocFile(e.target.files?.[0] ?? null)}
+              />
+            </label>
+            <button type="submit" disabled={!docFile || uploadingDoc}>
+              {uploadingDoc ? t("settings.planningDocUploading") : t("settings.planningDocUploadButton")}
+            </button>
+          </form>
+        </div>
       </div>
 
       {isAdmin && (
