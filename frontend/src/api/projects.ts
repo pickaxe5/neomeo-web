@@ -39,6 +39,10 @@ export function fetchParticipatingTeams(projectId: string) {
   return apiRequest<ParticipatingTeamOut[]>(`/projects/${projectId}/teams`);
 }
 
+export function removeParticipatingTeam(projectId: string, teamId: string) {
+  return apiRequest<void>(`/projects/${projectId}/teams/${teamId}`, { method: "DELETE" });
+}
+
 export function deleteProject(projectId: string) {
   return apiRequest<void>(`/projects/${projectId}`, { method: "DELETE" });
 }

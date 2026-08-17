@@ -8,6 +8,8 @@ import {
   leaveTeam,
   fetchTeamMembers,
   updateMyAssignment,
+  updateMemberRole,
+  removeMember,
 } from "../api/teams";
 import { fetchMyTeams } from "../api/me";
 import { useAuth } from "../context/AuthContext";
@@ -29,6 +31,7 @@ export function TeamPage() {
   const [members, setMembers] = useState<TeamMemberOut[] | null>(null);
   const [membersUnavailable, setMembersUnavailable] = useState(false);
   const [myJobRole, setMyJobRole] = useState<JobRole | "">("");
+  const [myJobRoleLabel, setMyJobRoleLabel] = useState("");
   const [myAssignedArea, setMyAssignedArea] = useState("");
   const [assignmentSaved, setAssignmentSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +58,7 @@ export function TeamPage() {
         const mine = rows.find((m) => m.user_id === user?.id);
         if (mine) {
           setMyJobRole(mine.job_role ?? "");
+          setMyJobRoleLabel(mine.job_role_label ?? "");
           setMyAssignedArea(mine.assigned_area ?? "");
         }
       })
@@ -69,6 +73,7 @@ export function TeamPage() {
     try {
       const updated = await updateMyAssignment(teamId, {
         job_role: myJobRole || undefined,
+        job_role_label: myJobRole === "custom" ? myJobRoleLabel || undefined : undefined,
         assigned_area: myAssignedArea || undefined,
       });
       setMembers((prev) => prev?.map((m) => (m.user_id === updated.user_id ? updated : m)) ?? prev);
@@ -133,6 +138,38 @@ export function TeamPage() {
       navigate("/");
     } catch (err) {
       setError(errorMessage(err));
+      setBusy(false);
+    }
+  }
+
+  async function handleTransferLeader(targetUserId: string, targetName: string) {
+    if (!teamId) return;
+    if (!window.confirm(t("team.transferLeaderConfirm", { name: targetName }))) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await updateMemberRole(teamId, targetUserId, { role: "leader" });
+      const rows = await fetchTeamMembers(teamId);
+      setMembers(rows);
+      setMyRole("member");
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemoveMember(targetUserId: string, targetName: string) {
+    if (!teamId) return;
+    if (!window.confirm(t("team.removeMemberConfirm", { name: targetName }))) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await removeMember(teamId, targetUserId);
+      setMembers((prev) => prev?.filter((m) => m.user_id !== targetUserId) ?? prev);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
       setBusy(false);
     }
   }
@@ -258,6 +295,8 @@ export function TeamPage() {
                   m.assigned_area || (m.assigned_paths && m.assigned_paths.length > 0
                     ? m.assigned_paths.join(", ")
                     : null);
+                const displayName = m.github_handle ? `@${m.github_handle}` : m.name ?? t("team.noName");
+                const canManage = myRole === "leader" && m.user_id !== user?.id;
                 return (
                   <div key={m.user_id} className="list-row" style={{ cursor: "default" }}>
                     {m.github_handle ? (
@@ -270,9 +309,7 @@ export function TeamPage() {
                       <span className="list-row-icon">{(m.name ?? "?").slice(0, 1).toUpperCase()}</span>
                     )}
                     <span className="list-row-main">
-                      <span className="name">
-                        {m.github_handle ? `@${m.github_handle}` : m.name ?? t("team.noName")}
-                      </span>
+                      <span className="name">{displayName}</span>
                       <span className="sub">
                         {areaText ? (
                           <>
@@ -285,10 +322,37 @@ export function TeamPage() {
                       </span>
                     </span>
                     <span className="list-row-end">
-                      {m.job_role && <span className="badge muted">{t(jobRoleKey(m.job_role))}</span>}
+                      {m.job_role && (
+                        <span className="badge muted">
+                          {m.job_role === "custom" && m.job_role_label
+                            ? m.job_role_label
+                            : t(jobRoleKey(m.job_role))}
+                        </span>
+                      )}
                       <span className={`badge ${m.role === "leader" ? "accent" : "muted"}`}>
                         {m.role === "leader" ? t("common.leader") : t("common.member")}
                       </span>
+                      {canManage && (
+                        <>
+                          {m.role === "member" && (
+                            <button
+                              style={{ padding: "3px 8px", fontSize: 11.5 }}
+                              disabled={busy}
+                              onClick={() => handleTransferLeader(m.user_id, displayName)}
+                            >
+                              {t("team.transferLeader")}
+                            </button>
+                          )}
+                          <button
+                            className="danger"
+                            style={{ padding: "3px 8px", fontSize: 11.5 }}
+                            disabled={busy}
+                            onClick={() => handleRemoveMember(m.user_id, displayName)}
+                          >
+                            {t("team.removeMember")}
+                          </button>
+                        </>
+                      )}
                     </span>
                   </div>
                 );
@@ -314,6 +378,17 @@ export function TeamPage() {
                 ))}
               </select>
             </div>
+            {myJobRole === "custom" && (
+              <div className="field">
+                <label>{t("team.roleCustomLabel")}</label>
+                <input
+                  value={myJobRoleLabel}
+                  onChange={(e) => setMyJobRoleLabel(e.target.value)}
+                  placeholder={t("team.roleCustomLabelPlaceholder")}
+                  required
+                />
+              </div>
+            )}
             <div className="field">
               <label>{t("team.assignedArea")}</label>
               <input

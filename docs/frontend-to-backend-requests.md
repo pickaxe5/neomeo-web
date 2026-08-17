@@ -9,7 +9,23 @@
 
 ---
 
-## 🐛 발견한 버그 (`backend-to-frontend-requests.md` 항목 검증 중 발견, 2026-08-16)
+## 🐛 발견한 버그 (8~13번 구현 검증 중 발견, 2026-08-17)
+
+### [블로킹] `POST /demo/seed` 두 번째 호출부터 500 에러
+
+**재현**: 로컬 Docker(빈 DB)에서 `/demo/seed`를 한 번 호출해 정상 시딩된 뒤, 같은 데모 계정으로
+`/demo/seed`를 다시 호출하면(재시딩 — 기존 데모 데이터를 지우고 새로 만드는 로직) 500이 납니다.
+
+**원인**: 로그 상 `sqlalchemy.exc.IntegrityError: ... violates foreign key constraint
+"project_repos_project_id_fkey" ... still referenced from table "project_repos"`.
+`app/seed/fake_layer0.py`의 재시딩 정리 로직이 기존 데모 프로젝트를 지우기 전에
+`RawEvent`/`SummaryCard`/`ClosureRun`/`ProjectDocument`/`ProjectTeam`/`ProjectAdmin`은 지우는데
+(11번 항목으로 새로 생긴) `ProjectRepo`는 안 지우고 있어서, `Project` 삭제 시 FK 제약에 걸립니다.
+`DELETE /projects/{id}`(3번 항목) 쪽 cascade 삭제 로직에는 이미 `ProjectRepo` 삭제가 들어가 있으니
+그거랑 똑같이 맞추면 될 것 같습니다.
+
+**영향**: 로컬 개발·데모 준비 중 재시딩이 필요할 때마다 막힙니다 (DB를 통째로 지우고 처음부터
+다시 시딩해야 우회 가능).
 
 ### [블로킹] `PATCH /teams/{team_id}/members/me` — job_role 저장 시 500 에러
 
@@ -275,6 +291,9 @@ Content-Type: application/json
 PM이 전달한 수정사항 중 백엔드 작업이 필요한 항목만 정리합니다. 나머지(타임존/국가 select화,
 팀 생성 폼 업무시간 필드 추가, 팀원 GitHub 프로필 사진)는 프론트 단독으로 처리 가능해서 이미
 `frontend` 브랜치에 반영했습니다.
+
+**8~13번 전부 백엔드 커밋 `432a368`로 구현 완료, 프론트도 전부 실제 API에 맞춰 반영·검증했습니다
+(2026-08-17).**
 
 ## 8. 프로젝트 생성 시 팀 선택을 선택사항으로
 
