@@ -142,6 +142,14 @@ textarea:focus {
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
+/* 펼쳐진 <select> 옵션 목록은 OS 네이티브 흰 배경으로 그려지는 브라우저가 많아서,
+   select 자체의 밝은 글자색(--text-h)을 그대로 물려받으면 흰 배경에 흰 글씨가 된다.
+   옵션만 어두운 글자색으로 고정해 배경색과 무관하게 읽히도록 한다. */
+select option {
+  color: oklch(0.25 0.02 265);
+  background: oklch(1 0 0);
+}
+
 #root {
   min-height: 100svh;
   display: flex;
