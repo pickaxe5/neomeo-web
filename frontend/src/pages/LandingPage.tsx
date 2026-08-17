@@ -131,12 +131,6 @@ function scrollTo(id: string) {
 export function LandingPage() {
   const { t } = useLanguage();
 
-  const problems = [
-    { emoji: "🌙", title: t("landing.problem1Title"), desc: t("landing.problem1Desc") },
-    { emoji: "🌐", title: t("landing.problem2Title"), desc: t("landing.problem2Desc") },
-    { emoji: "✂️", title: t("landing.problem3Title"), desc: t("landing.problem3Desc") },
-  ];
-
   const features = [
     { title: t("landing.feature1Title"), desc: t("landing.feature1Desc"), color: "oklch(0.75 0.12 75)" },
     { title: t("landing.feature2Title"), desc: t("landing.feature2Desc"), color: "oklch(0.65 0.12 240)" },
@@ -170,7 +164,6 @@ export function LandingPage() {
             <span className="brand-en">NEOMEO</span>
           </Link>
           <nav className="landing-navbar-links">
-            <a onClick={() => scrollTo("#landing-problem")}>{t("landing.navProblem")}</a>
             <a onClick={() => scrollTo("#landing-solution")}>{t("landing.navSolution")}</a>
             <a onClick={() => scrollTo("#landing-features")}>{t("landing.navFeatures")}</a>
             <a onClick={() => scrollTo("#landing-how")}>{t("landing.navHow")}</a>
@@ -230,26 +223,6 @@ export function LandingPage() {
             <LiveClocks />
             <TimelineMocks />
           </div>
-        </div>
-      </section>
-
-      <section id="landing-problem" className="landing-section">
-        <div className="landing-section-head">
-          <h2>
-            {t("landing.problemsTitle1")}
-            <br />
-            {t("landing.problemsTitle2")}
-          </h2>
-          <p>{t("landing.problemsSub")}</p>
-        </div>
-        <div className="landing-grid-3">
-          {problems.map((p) => (
-            <div key={p.title} className="landing-card">
-              <div className="emoji">{p.emoji}</div>
-              <h3>{p.title}</h3>
-              <p>{p.desc}</p>
-            </div>
-          ))}
         </div>
       </section>
 
