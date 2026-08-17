@@ -8,9 +8,12 @@ from app.schemas.team import TeamOut
 
 class ProjectCreate(BaseModel):
     name: str
-    repo_full_name: str | None = None  # "owner/repo" — 온보딩에서 레포 목록 중 선택
-    repo_id: str | None = None
-    team_id: uuid.UUID  # 프로젝트를 만드는 사용자의 소속 팀이 첫 참여 팀이 된다
+    # docs/frontend-to-backend-requests.md #8: 아직 소속 팀이 없는 사용자도 프로젝트를 먼저
+    # 만들 수 있도록 선택 입력으로 완화. 없으면 참여 팀 없이 생성되고, 나중에
+    # POST /projects/{id}/teams로 팀을 추가한다.
+    team_id: uuid.UUID | None = None
+    # docs/frontend-to-backend-requests.md #11: 레포 연결은 생성 시점이 아니라 접근 권한
+    # 검증이 필요해 POST /projects/{id}/github/connect로만 한다 (여러 개 연결 가능).
 
 
 class ProjectUpdate(BaseModel):
@@ -20,8 +23,6 @@ class ProjectUpdate(BaseModel):
 class ProjectOut(BaseModel):
     id: uuid.UUID
     name: str
-    repo_full_name: str | None
-    repo_id: str | None
     created_at: datetime
     # docs/frontend-to-backend-requests.md #4: 요청한 사용자가 project_admins에 속하는지 여부.
     # 비로그인 조회 시 False.

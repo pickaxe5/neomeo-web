@@ -140,8 +140,6 @@ def accept_project_invite(
         project=ProjectOut(
             id=project.id,
             name=project.name,
-            repo_full_name=project.repo_full_name,
-            repo_id=project.repo_id,
             created_at=project.created_at,
             is_admin=False,
         ),
