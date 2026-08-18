@@ -41,6 +41,7 @@ export function ProjectPage() {
 
   useEffect(() => {
     if (!projectId) return;
+    setError(null);
     fetchProject(projectId)
       .then(setProject)
       .catch((err) => setError(errorMessage(err)));
@@ -83,6 +84,7 @@ function TimelineTab({ projectId }: { projectId: string }) {
   const [busy, setBusy] = useState(false);
 
   function reload() {
+    setError(null);
     fetchTimeline(projectId, language)
       .then((data) => setCards([...data].reverse()))
       .catch((err) => setError(errorMessage(err)));
@@ -155,6 +157,7 @@ function BriefingTab({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    setError(null);
     fetchBriefing(projectId)
       .then(setBriefing)
       .catch((err) => setError(errorMessage(err)));
@@ -196,6 +199,7 @@ function SettingsTab({
   const [statusBusy, setStatusBusy] = useState(false);
 
   useEffect(() => {
+    setError(null);
     fetchGithubStatus(projectId)
       .then(setRepos)
       .catch((err) => setError(errorMessage(err)));

@@ -48,6 +48,7 @@ export function DashboardPage() {
   const [projectTeamId, setProjectTeamId] = useState("");
 
   function reload() {
+    setError(null);
     fetchMyTeams().then(setTeams).catch((err) => setError(errorMessage(err)));
     fetchMyProjects().then(setProjects).catch((err) => setError(errorMessage(err)));
   }

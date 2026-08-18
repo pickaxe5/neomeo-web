@@ -42,6 +42,7 @@ export function TeamPage() {
 
   useEffect(() => {
     if (!teamId) return;
+    setError(null);
     fetchTeam(teamId)
       .then((t2) => {
         setTeam(t2);
