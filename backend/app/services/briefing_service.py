@@ -1,8 +1,9 @@
 """기능명세서 7.1: 업무 시작 브리핑. 3단 우선순위(답해야 할 것 → 내 작업과 맞물린 변경 →
 팀 진행 상황) 중 1·2단계는 구조화 사실 데이터(0층)와 미응답 항목(3.3)·담당 영역(4.2)만
-있으면 AI 없이도 조립할 수 있다. 3단계(팀 진행 상황)는 개인화 서술(personal_progress_summaries)이
-있으면 우선 쓰고, 아직 AI가 안 채웠으면(NULL) 팀 공통 카드(summary_cards.content)로 폴백한다 —
-타임라인이 보여주는 팀 공통 카드와 달리, 브리핑은 "나에게" 어떤 의미였는지를 보여주는 게 목표다."""
+있으면 AI 없이도 조립할 수 있다. 3단계(팀 진행 상황)는 마지막으로 본 이후(since) 마감된
+모든 팀의 카드 목록이다 — "자는 동안 다른 팀이 뭘 했는지 아침에 전부 본다"가 기획 의도라
+가장 최근 1건만 보여주면 안 된다. 카드별로 개인화 서술(personal_progress_summaries)이
+있으면 우선 쓰고, 아직 AI가 안 채웠으면(NULL) 팀 공통 카드(summary_cards.content)로 폴백한다."""
 
 from datetime import datetime, timezone
 
@@ -15,7 +16,7 @@ from app.models.summary import PersonalProgressSummary, SummaryCard
 from app.models.team import Team, TeamMembership
 from app.models.unanswered import UnansweredItem
 from app.models.user import User
-from app.schemas.briefing import BriefingItem, BriefingOut
+from app.schemas.briefing import BriefingItem, BriefingOut, TeamProgressCard
 
 _SIGNAL_REASON = {
     "reviewer_requested": "리뷰 요청",
@@ -94,11 +95,11 @@ def _affects_my_work(db: Session, project_id, since: datetime, user: User) -> li
     return items
 
 
-def _team_progress_summary(db: Session, project_id, user: User) -> str | None:
-    """본인이 속한 팀 자신의 가장 최근 마감을 기준으로, 개인화된 서술(personal_progress_summaries)이
-    있으면 그걸 먼저 보여주고, 아직 AI가 안 채웠으면 팀 공통 카드(summary_cards)로 폴백한다.
-    팀 필터가 없으면 프로젝트 내 다른 팀의 카드가 섞여 나와 타임라인과 구분이 안 되므로,
-    반드시 closure_run의 team_id로 좁혀야 한다."""
+def _team_progress_summary(db: Session, project_id, since: datetime, user: User) -> list[TeamProgressCard]:
+    """마지막으로 브리핑을 본 이후(since) 마감된 모든 팀의 카드를 시간순으로 담는다.
+    "자는 동안 다른 팀이 뭘 했는지 아침에 전부 본다"는 기획 의도라, 본인 팀으로 좁히거나
+    가장 최근 1건만 보여주면 안 된다 — 다른 팀 카드도 내 언어로 개인화해 볼 수 있어야
+    하므로(S-005), 팀 필터 없이 프로젝트 전체를 since 기준으로만 거른다."""
     membership = (
         db.query(TeamMembership)
         .join(ProjectTeam, ProjectTeam.team_id == TeamMembership.team_id)
@@ -106,36 +107,42 @@ def _team_progress_summary(db: Session, project_id, user: User) -> str | None:
         .first()
     )
     if membership is None:
-        return None
+        return []
     team = db.get(Team, membership.team_id)
     language = team.default_language if team else "ko"
 
-    row = (
+    rows = (
         db.query(SummaryCard, ClosureRun)
         .join(ClosureRun, ClosureRun.id == SummaryCard.closure_run_id)
         .filter(
             ClosureRun.project_id == project_id,
-            ClosureRun.team_id == membership.team_id,
+            ClosureRun.range_end > since,
             SummaryCard.language == language,
         )
-        .order_by(ClosureRun.range_end.desc())
-        .first()
+        .order_by(ClosureRun.range_end.asc())
+        .all()
     )
-    if row is None:
-        return None
-    card, closure_run = row
+    if not rows:
+        return []
 
-    personal = (
-        db.query(PersonalProgressSummary)
-        .filter(
-            PersonalProgressSummary.closure_run_id == closure_run.id,
+    closure_run_ids = [closure_run.id for _, closure_run in rows]
+    personal_by_closure = {
+        p.closure_run_id: p.content
+        for p in db.query(PersonalProgressSummary).filter(
+            PersonalProgressSummary.closure_run_id.in_(closure_run_ids),
             PersonalProgressSummary.user_id == user.id,
         )
-        .first()
-    )
-    if personal and personal.content:
-        return personal.content
-    return card.content
+    }
+
+    return [
+        TeamProgressCard(
+            team_id=closure_run.team_id,
+            range_start=closure_run.range_start,
+            range_end=closure_run.range_end,
+            content=personal_by_closure.get(closure_run.id) or card.content,
+        )
+        for card, closure_run in rows
+    ]
 
 
 def build_briefing(db: Session, project: Project, user: User) -> BriefingOut:
@@ -147,7 +154,7 @@ def build_briefing(db: Session, project: Project, user: User) -> BriefingOut:
         generated_at=datetime.now(timezone.utc),
         needs_my_response=_needs_my_response(db, project.id, user.id),
         affects_my_work=_affects_my_work(db, project.id, since, user),
-        team_progress_summary=_team_progress_summary(db, project.id, user),
+        team_progress_summary=_team_progress_summary(db, project.id, since, user),
     )
 
     user.last_briefing_viewed_at = briefing.generated_at

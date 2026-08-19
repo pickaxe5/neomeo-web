@@ -15,6 +15,7 @@ from app.models.user import User
 from app.schemas.timeline import ClosureTriggerRequest, TimelineCardOut, TimelineSourceEvent
 from app.services import github_collector
 from app.services.closure_service import run_closure
+from app.services.unanswered_service import detect_unanswered_items
 
 logger = logging.getLogger("neomeo.timeline")
 
@@ -105,7 +106,10 @@ def trigger_manual_closure(
     자동 마감(should_auto_close)은 10분 폴링 워커가 수집 직후 같은 사이클에서 판단하므로
     항상 최신 상태를 본다. 수동 마감은 사용자가 임의 시점에 누르므로, 마감 직전 GitHub를
     한 번 더 동기 수집해 직전 폴링 이후의 활동을 놓치지 않게 한다 — 이게 없으면 방금 push한
-    커밋이 아직 폴링 전이라 '변동 없음'으로 잘못 굳어버릴 수 있다."""
+    커밋이 아직 폴링 전이라 '변동 없음'으로 잘못 굳어버릴 수 있다. 폴링 워커·github/connect와
+    동일하게 수집 직후 미응답 항목(3.3)도 같이 갱신한다 — 이게 없으면 방금 push한 리뷰
+    요청·멘션이 폴링 전이라 브리핑 tier1에 안 뜬 채로 남는, 카드 쪽과 같은 종류의 문제가
+    생긴다."""
     project = db.get(Project, project_id)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
@@ -116,6 +120,7 @@ def trigger_manual_closure(
 
     try:
         github_collector.collect_project_events(db, project)
+        detect_unanswered_items(db, project)
     except github_collector.CollectionError as exc:
         logger.warning("수동 마감 직전 GitHub 수집 실패 (project=%s): %s", project.id, exc)
 
