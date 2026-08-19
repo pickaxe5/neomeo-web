@@ -146,9 +146,12 @@ def _team_progress_summary(db: Session, project_id, since: datetime, user: User)
 
 
 def build_briefing(db: Session, project: Project, user: User) -> BriefingOut:
+    """조회 전용 — last_briefing_viewed_at은 여기서 건드리지 않는다. GET할 때마다 자동으로
+    갱신하면, 화면을 그냥 왔다갔다만 해도(재조회) 그사이 안 본 내용이 "이미 본 것"으로
+    처리돼 사라진다. "다 봤다"는 ack_briefing_viewed()로 명시적으로만 갱신한다."""
     since = user.last_briefing_viewed_at or project.created_at
 
-    briefing = BriefingOut(
+    return BriefingOut(
         project_id=project.id,
         user_id=user.id,
         generated_at=datetime.now(timezone.utc),
@@ -157,6 +160,11 @@ def build_briefing(db: Session, project: Project, user: User) -> BriefingOut:
         team_progress_summary=_team_progress_summary(db, project.id, since, user),
     )
 
-    user.last_briefing_viewed_at = briefing.generated_at
+
+def ack_briefing_viewed(db: Session, user: User) -> datetime:
+    """사용자가 브리핑을 확인했다고 명시적으로 알릴 때만 호출한다 (조회 자체와 분리).
+    이 시점 이후부터가 다음 브리핑의 since 기준이 된다."""
+    now = datetime.now(timezone.utc)
+    user.last_briefing_viewed_at = now
     db.commit()
-    return briefing
+    return now
