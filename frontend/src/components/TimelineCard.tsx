@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { TimelineCardOut, TimelineEventType } from "../types/api";
 import { useLanguage } from "../i18n/LanguageContext";
 
-function formatRange(start: string, end: string): string {
+export function formatRange(start: string, end: string): string {
   const s = new Date(start);
   const e = new Date(end);
   const fmt = (d: Date) =>

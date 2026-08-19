@@ -196,13 +196,20 @@ export interface BriefingItem {
   reason: string;
 }
 
+export interface TeamProgressCard {
+  team_id: string;
+  range_start: string;
+  range_end: string;
+  content: string | null;
+}
+
 export interface BriefingOut {
   project_id: string;
   user_id: string;
   generated_at: string;
   needs_my_response: BriefingItem[];
   affects_my_work: BriefingItem[];
-  team_progress_summary: string | null;
+  team_progress_summary: TeamProgressCard[];
 }
 
 export interface SeedResponse {
