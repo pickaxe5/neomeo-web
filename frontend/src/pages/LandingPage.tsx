@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { SkyBackground } from "../components/SkyBackground";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
 import { useLanguage } from "../i18n/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 
 const CITIES = [
   { key: "landing.city.seoul", tz: "Asia/Seoul", dot: "oklch(0.75 0.12 75)" },
@@ -130,6 +131,8 @@ function scrollTo(id: string) {
 
 export function LandingPage() {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
+  const homeLink = isAuthenticated ? "/welcome" : "/";
 
   const features = [
     { title: t("landing.feature1Title"), desc: t("landing.feature1Desc"), color: "oklch(0.75 0.12 75)" },
@@ -165,7 +168,7 @@ export function LandingPage() {
 
       <header className="landing-navbar">
         <div className="landing-navbar-inner">
-          <Link to="/" className="brand">
+          <Link to={homeLink} className="brand">
             <span className="brand-ko">너머</span>
             <span className="brand-en">NEOMEO</span>
           </Link>
