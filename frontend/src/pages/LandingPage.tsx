@@ -153,6 +153,12 @@ export function LandingPage() {
     { title: t("landing.solutionItem3Title"), desc: t("landing.solutionItem3Desc") },
   ];
 
+  const roadmapItems = [
+    { title: t("landing.roadmapItem1Title"), desc: t("landing.roadmapItem1Desc"), color: "oklch(0.65 0.12 240)" },
+    { title: t("landing.roadmapItem2Title"), desc: t("landing.roadmapItem2Desc"), color: "oklch(0.7 0.1 160)" },
+    { title: t("landing.roadmapItem3Title"), desc: t("landing.roadmapItem3Desc"), color: "oklch(0.75 0.12 75)" },
+  ];
+
   return (
     <div className="landing">
       <SkyBackground />
@@ -166,6 +172,7 @@ export function LandingPage() {
           <nav className="landing-navbar-links">
             <a onClick={() => scrollTo("#landing-solution")}>{t("landing.navSolution")}</a>
             <a onClick={() => scrollTo("#landing-features")}>{t("landing.navFeatures")}</a>
+            <a onClick={() => scrollTo("#landing-roadmap")}>{t("landing.navRoadmap")}</a>
             <a onClick={() => scrollTo("#landing-how")}>{t("landing.navHow")}</a>
           </nav>
           <div className="landing-navbar-actions">
@@ -298,6 +305,32 @@ export function LandingPage() {
               </div>
               <h3>{f.title}</h3>
               <p>{f.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="landing-roadmap" className="landing-section">
+        <div className="landing-section-head">
+          <div className="landing-eyebrow">{t("landing.roadmapEyebrow")}</div>
+          <h2>
+            {t("landing.roadmapTitle1")}
+            <br />
+            {t("landing.roadmapTitle2")}
+          </h2>
+          <p>{t("landing.roadmapSub")}</p>
+        </div>
+        <div className="landing-feature-grid">
+          {roadmapItems.map((item) => (
+            <div key={item.title} className="landing-card">
+              <div className="landing-card-icon" style={{ background: `${item.color}22`, color: item.color }}>
+                ●
+              </div>
+              <div className="badge muted" style={{ marginBottom: 10 }}>
+                {t("landing.roadmapBadge")}
+              </div>
+              <h3>{item.title}</h3>
+              <p>{item.desc}</p>
             </div>
           ))}
         </div>
