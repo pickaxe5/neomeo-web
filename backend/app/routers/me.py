@@ -1,5 +1,6 @@
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -46,13 +47,23 @@ def list_my_projects(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ) -> list[MyProjectOut]:
     """C-001: 사용자가 속한 팀이 참여 중인 프로젝트 목록. 프로젝트 참여자 = 참여 팀의
-    전체 멤버 원칙(4장)에 따라, 팀 소속만으로 프로젝트 접근 범위가 정해진다."""
-    projects = (
-        db.query(Project)
+    전체 멤버 원칙(4장)에 따라, 팀 소속만으로 프로젝트 접근 범위가 정해진다.
+
+    docs/frontend-to-backend-requests.md 버그 리포트: 팀 참여 조인만으로는 8번(팀 없이
+    프로젝트 생성)이나, 관리자 본인이 속한 팀만 12번(참여 팀 내보내기)으로 빠진 경우
+    프로젝트가 만든 사람에게도 안 보이는 문제가 있었다. project_admins 소속도 합쳐서
+    "팀으로 참여 중이거나 내가 관리자인" 프로젝트를 전부 포함하도록 수정."""
+    team_project_ids = (
+        db.query(Project.id)
         .join(ProjectTeam, ProjectTeam.project_id == Project.id)
         .join(TeamMembership, TeamMembership.team_id == ProjectTeam.team_id)
         .filter(TeamMembership.user_id == current_user.id)
-        .distinct()
+    )
+    my_admin_project_ids = db.query(ProjectAdmin.project_id).filter(ProjectAdmin.user_id == current_user.id)
+
+    projects = (
+        db.query(Project)
+        .filter(or_(Project.id.in_(team_project_ids), Project.id.in_(my_admin_project_ids)))
         .order_by(Project.created_at.desc())
         .all()
     )
@@ -68,8 +79,6 @@ def list_my_projects(
         MyProjectOut(
             id=p.id,
             name=p.name,
-            repo_full_name=p.repo_full_name,
-            repo_id=p.repo_id,
             created_at=p.created_at,
             is_admin=p.id in admin_project_ids,
         )

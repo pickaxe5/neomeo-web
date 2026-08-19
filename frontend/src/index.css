@@ -1,70 +1,42 @@
+/* Dawn Relay — same dark navy / dawn amber system as the marketing site */
 :root {
-  --text: #5c6470;
-  --text-dim: #8891a0;
-  --text-h: #14171f;
-  --bg: #f4f6f8;
-  --bg-soft: #eaedf1;
-  --border: #dde1e6;
-  --card-bg: #fff;
-  --accent: #1d63ed;
-  --accent-2: #0db7ed;
-  --accent-bg: rgba(29, 99, 237, 0.08);
-  --accent-border: rgba(29, 99, 237, 0.4);
-  --danger: #d1273d;
-  --danger-bg: rgba(209, 39, 61, 0.09);
-  --ok: #1a8a4a;
-  --ok-bg: rgba(26, 138, 74, 0.09);
-  --warn: #b5760a;
-  --warn-bg: rgba(181, 118, 10, 0.09);
-  --shadow: rgba(20, 23, 31, 0.05) 0 1px 3px 0;
+  --text: oklch(0.65 0.03 265);
+  --text-dim: oklch(0.5 0.03 265);
+  --text-h: oklch(0.93 0.01 90);
+  --bg: oklch(0.18 0.06 265);
+  --bg-soft: oklch(1 0 0 / 4%);
+  --border: oklch(1 0 0 / 14%);
+  --card-bg: oklch(1 0 0 / 6%);
+  --accent: oklch(0.75 0.12 75);
+  --accent-2: oklch(0.65 0.12 240);
+  --accent-bg: oklch(0.75 0.12 75 / 15%);
+  --accent-border: oklch(0.75 0.12 75 / 30%);
+  --danger: oklch(0.7 0.19 22);
+  --danger-bg: oklch(0.7 0.19 22 / 14%);
+  --ok: oklch(0.7 0.1 160);
+  --ok-bg: oklch(0.7 0.1 160 / 14%);
+  --warn: oklch(0.7 0.15 60);
+  --warn-bg: oklch(0.7 0.15 60 / 14%);
+  --shadow: rgba(0, 0, 0, 0.35) 0 4px 20px 0;
 
-  --sidebar-bg: #10151f;
-  --sidebar-bg-active: #1a2130;
-  --sidebar-text: #99a3b5;
-  --sidebar-text-h: #f2f4f7;
-  --sidebar-border: #232a38;
+  --sidebar-bg: oklch(0.15 0.05 265);
+  --sidebar-bg-active: oklch(0.28 0.08 270);
+  --sidebar-text: oklch(0.65 0.02 260);
+  --sidebar-text-h: oklch(0.93 0.01 90);
+  --sidebar-border: oklch(1 0 0 / 10%);
 
-  --sans: "Pretendard Variable", "Apple SD Gothic Neo", system-ui, "Segoe UI", Roboto,
-    "Malgun Gothic", sans-serif;
-  --mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --sans: "Pretendard Variable", "Plus Jakarta Sans", "Apple SD Gothic Neo", system-ui,
+    "Segoe UI", Roboto, "Malgun Gothic", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
 
   font: 15px/150% var(--sans);
-  color-scheme: light dark;
+  color-scheme: dark;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --text: #9aa2b1;
-    --text-dim: #6b7383;
-    --text-h: #eef0f4;
-    --bg: #0d1017;
-    --bg-soft: #151a24;
-    --border: #232a38;
-    --card-bg: #151a24;
-    --accent: #4c8dff;
-    --accent-2: #3fd4f2;
-    --accent-bg: rgba(76, 141, 255, 0.14);
-    --accent-border: rgba(76, 141, 255, 0.4);
-    --danger: #f26a7a;
-    --danger-bg: rgba(242, 106, 122, 0.14);
-    --ok: #4ade80;
-    --ok-bg: rgba(74, 222, 128, 0.14);
-    --warn: #e3ac3f;
-    --warn-bg: rgba(227, 172, 63, 0.14);
-    --shadow: rgba(0, 0, 0, 0.3) 0 1px 3px 0;
-
-    --sidebar-bg: #0a0d13;
-    --sidebar-bg-active: #161c28;
-    --sidebar-text: #838da0;
-    --sidebar-text-h: #f2f4f7;
-    --sidebar-border: #1c2230;
-  }
 }
 
 * {
@@ -80,14 +52,15 @@ h1,
 h2,
 h3 {
   font-family: var(--sans);
-  font-weight: 650;
+  font-weight: 700;
   color: var(--text-h);
   margin: 0 0 6px;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.02em;
 }
 
 h1 {
-  font-size: 22px;
+  font-size: 28px;
+  font-weight: 800;
 }
 h2 {
   font-size: 16px;
@@ -123,12 +96,16 @@ button {
   color: var(--text-h);
   font-weight: 500;
   font-size: 13.5px;
-  border-radius: 6px;
+  border-radius: 8px;
   padding: 7px 13px;
-  transition: border-color 0.12s ease, background 0.12s ease, filter 0.12s ease;
+  transition: border-color 0.16s cubic-bezier(0.23, 1, 0.32, 1), background 0.16s cubic-bezier(0.23, 1, 0.32, 1),
+    filter 0.16s ease, transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
 }
 button:hover:not(:disabled) {
   border-color: var(--accent-border);
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 button:disabled {
   opacity: 0.5;
@@ -137,10 +114,12 @@ button:disabled {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: oklch(0.18 0.04 265);
+  font-weight: 600;
 }
 button.primary:hover:not(:disabled) {
   filter: brightness(1.08);
+  box-shadow: 0 8px 24px oklch(0.75 0.12 75 / 30%);
 }
 
 input,
@@ -161,6 +140,14 @@ textarea:focus {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* 펼쳐진 <select> 옵션 목록은 OS 네이티브 흰 배경으로 그려지는 브라우저가 많아서,
+   select 자체의 밝은 글자색(--text-h)을 그대로 물려받으면 흰 배경에 흰 글씨가 된다.
+   옵션만 어두운 글자색으로 고정해 배경색과 무관하게 읽히도록 한다. */
+select option {
+  color: oklch(0.25 0.02 265);
+  background: oklch(1 0 0);
 }
 
 #root {

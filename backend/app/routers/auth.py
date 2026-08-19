@@ -47,10 +47,20 @@ def github_login() -> RedirectResponse:
 
 @router.get("/github/callback")
 def github_callback(
-    code: str, db: Session = Depends(get_db), lang: str = Depends(get_lang)
+    code: str | None = None,
+    error: str | None = None,
+    db: Session = Depends(get_db),
 ) -> RedirectResponse:
     """GitHub 인가 코드를 토큰으로 교환하고, 최초 로그인 시 사용자를 자동 생성한다.
-    로그인 시점에 GitHub 핸들이 확보되어 별도 매핑 단계가 불필요하다 (A-001)."""
+    로그인 시점에 GitHub 핸들이 확보되어 별도 매핑 단계가 불필요하다 (A-001).
+
+    이 엔드포인트는 프론트 JS가 아니라 GitHub이 브라우저를 직접 리다이렉트시켜 호출하므로,
+    실패 시에도 JSON 에러가 아니라 프론트 로그인 화면으로 되돌려보내야 한다. 사용자가 인가를
+    취소하면 GitHub은 code 없이 error=access_denied로 리다이렉트한다."""
+    error_redirect = RedirectResponse(f"{settings.frontend_base_url}/login?error=github_auth_failed")
+    if error or not code:
+        return error_redirect
+
     with httpx.Client(timeout=10) as client:
         token_resp = client.post(
             GITHUB_TOKEN_URL,
@@ -65,21 +75,29 @@ def github_callback(
         token_data = token_resp.json()
         github_access_token = token_data.get("access_token")
         if not github_access_token:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, t("github_auth_failed", lang))
+            return error_redirect
 
         user_resp = client.get(
             GITHUB_USER_API_URL,
             headers={"Authorization": f"Bearer {github_access_token}"},
         )
         gh_user = user_resp.json()
+        if "id" not in gh_user:
+            return error_redirect
 
     github_id = str(gh_user["id"])
     github_handle = gh_user["login"]
+    github_email = gh_user.get("email")
 
     user = db.query(User).filter(User.github_id == github_id).first()
+    if user is None and github_email:
+        # users.email은 unique 제약이 있다. 이메일로 먼저 가입한 계정과 GitHub 이메일이
+        # 같으면 새로 INSERT하지 않고(IntegrityError 방지) 기존 계정에 GitHub을 연결한다.
+        user = db.query(User).filter(User.email == github_email).first()
+
     if user is None:
         user = User(
-            email=gh_user.get("email") or f"{github_handle}@users.noreply.github.com",
+            email=github_email or f"{github_handle}@users.noreply.github.com",
             github_id=github_id,
             github_handle=github_handle,
             name=gh_user.get("name") or github_handle,
@@ -87,6 +105,7 @@ def github_callback(
         )
         db.add(user)
     else:
+        user.github_id = github_id
         user.github_handle = github_handle
         user.github_access_token = github_access_token
 

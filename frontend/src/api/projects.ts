@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest, apiUpload } from "./client";
 import type {
   ProjectOut,
   ProjectCreate,
@@ -28,6 +28,14 @@ export function putProjectDocument(projectId: string, content: string) {
   });
 }
 
+// Speculative — not yet implemented on the backend. See
+// docs/frontend-to-backend-requests.md for the requested contract.
+export function uploadProjectDocumentFile(projectId: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiUpload<ProjectDocumentOut>(`/projects/${projectId}/document/upload`, formData);
+}
+
 export function addParticipatingTeam(projectId: string, teamId: string) {
   return apiRequest<void>(`/projects/${projectId}/teams`, {
     method: "POST",
@@ -39,22 +47,18 @@ export function fetchParticipatingTeams(projectId: string) {
   return apiRequest<ParticipatingTeamOut[]>(`/projects/${projectId}/teams`);
 }
 
+export function removeParticipatingTeam(projectId: string, teamId: string) {
+  return apiRequest<void>(`/projects/${projectId}/teams/${teamId}`, { method: "DELETE" });
+}
+
 export function deleteProject(projectId: string) {
   return apiRequest<void>(`/projects/${projectId}`, { method: "DELETE" });
 }
 
-/**
- * NOT YET IMPLEMENTED on the backend — 404s today.
- * Requested contract: docs/frontend-to-backend-requests.md
- */
 export function createProjectInviteLink(projectId: string) {
   return apiRequest<ProjectInviteLinkOut>(`/projects/${projectId}/invite-links`, { method: "POST" });
 }
 
-/**
- * NOT YET IMPLEMENTED on the backend — 404s today.
- * Requested contract: docs/frontend-to-backend-requests.md
- */
 export function acceptProjectInvite(token: string, teamId: string) {
   return apiRequest<ProjectInviteAcceptResponse>(`/project-invite/${token}/accept`, {
     method: "POST",

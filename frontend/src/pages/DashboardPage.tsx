@@ -3,16 +3,31 @@ import { Link } from "react-router-dom";
 import { fetchMyTeams, fetchMyProjects } from "../api/me";
 import { createTeam } from "../api/teams";
 import { createProject } from "../api/projects";
+import { useLanguage } from "../i18n/LanguageContext";
+import { useAuth } from "../context/AuthContext";
 import type { MyProjectOut, MyTeamOut } from "../types/api";
 import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
+import { TeamStatusBar } from "../components/TeamStatusBar";
+import { COUNTRY_CODES, countryLabel } from "../lib/countries";
+import { listTimezones } from "../lib/timezones";
 
 const INTRO_DISMISSED_KEY = "neomeo_dashboard_intro_dismissed";
 
+function greetingKey(hour: number): string {
+  if (hour >= 5 && hour < 12) return "dashboard.greetingMorning";
+  if (hour >= 12 && hour < 18) return "dashboard.greetingAfternoon";
+  if (hour >= 18 && hour < 23) return "dashboard.greetingEvening";
+  return "dashboard.greetingNight";
+}
+
 export function DashboardPage() {
+  const { t, lang } = useLanguage();
+  const { user } = useAuth();
   const [teams, setTeams] = useState<MyTeamOut[] | null>(null);
   const [projects, setProjects] = useState<MyProjectOut[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showIntro, setShowIntro] = useState(() => localStorage.getItem(INTRO_DISMISSED_KEY) !== "1");
+  const displayName = user?.name ?? user?.github_handle ?? null;
 
   function dismissIntro() {
     localStorage.setItem(INTRO_DISMISSED_KEY, "1");
@@ -24,12 +39,16 @@ export function DashboardPage() {
   const [teamTimezone, setTeamTimezone] = useState(Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [teamCountry, setTeamCountry] = useState("");
   const [teamLanguage, setTeamLanguage] = useState<"ko" | "en">("ko");
+  const [teamWorkStart, setTeamWorkStart] = useState("09:00");
+  const [teamWorkEnd, setTeamWorkEnd] = useState("18:00");
+  const timezoneOptions = listTimezones();
 
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [projectTeamId, setProjectTeamId] = useState("");
 
   function reload() {
+    setError(null);
     fetchMyTeams().then(setTeams).catch((err) => setError(errorMessage(err)));
     fetchMyProjects().then(setProjects).catch((err) => setError(errorMessage(err)));
   }
@@ -44,6 +63,8 @@ export function DashboardPage() {
         name: teamName,
         timezone: teamTimezone,
         country: teamCountry || undefined,
+        work_start: teamWorkStart,
+        work_end: teamWorkEnd,
         default_language: teamLanguage,
       });
       setTeamName("");
@@ -58,7 +79,7 @@ export function DashboardPage() {
     e.preventDefault();
     setError(null);
     try {
-      await createProject({ name: projectName, team_id: projectTeamId });
+      await createProject({ name: projectName, team_id: projectTeamId || undefined });
       setProjectName("");
       setShowProjectForm(false);
       reload();
@@ -69,21 +90,42 @@ export function DashboardPage() {
 
   return (
     <div className="page">
-      <h1>대시보드</h1>
+      <div className="dashboard-hero">
+        <div className="landing-eyebrow">
+          <span className="landing-eyebrow-dot" />
+          {t("dashboard.eyebrow")}
+        </div>
+        <h1>
+          {t(greetingKey(new Date().getHours()))}
+          {displayName ? `, ${displayName}` : ""}
+        </h1>
+      </div>
+
+      {teams && teams.length > 0 && (
+        <div className="dashboard-hero" style={{ marginBottom: 8 }}>
+          <h2 style={{ fontSize: 13, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-dim)" }}>
+            {t("dashboard.teamStatus")}
+          </h2>
+          <TeamStatusBar teams={teams} />
+        </div>
+      )}
 
       {showIntro && (
         <div className="intro-banner">
           <span className="intro-banner-icon">i</span>
           <div className="intro-banner-body">
-            <strong>처음이신가요?</strong>
+            <strong>{t("dashboard.introTitle")}</strong>
             <p>
-              아래 "내 프로젝트"에서 프로젝트를 클릭하면 상세 화면으로 들어갑니다. 거기서
-              <strong> 타임라인</strong>(팀별 업무 종료 카드), <strong>브리핑</strong>(내가 답해야 할 질문),{" "}
-              <strong>설정</strong>(GitHub 연동·팀 관리)을 확인할 수 있어요. 프로젝트가 아직 없다면
-              "내 팀"에서 팀을 먼저 만들거나, 로그인 화면의 데모 계정으로 예시 데이터를 체험해보세요.
+              {t("dashboard.introIntro")}
+              <strong> {t("dashboard.introTimeline")}</strong>
+              {t("dashboard.introTimelineParen")}
+              <strong>{t("dashboard.introBriefing")}</strong>
+              {t("dashboard.introBriefingParen")}
+              <strong>{t("dashboard.introSettings")}</strong>
+              {t("dashboard.introSettingsParen")}
             </p>
           </div>
-          <button className="intro-banner-close" onClick={dismissIntro} aria-label="안내 닫기">
+          <button className="intro-banner-close" onClick={dismissIntro} aria-label={t("dashboard.introClose")}>
             ×
           </button>
         </div>
@@ -93,57 +135,88 @@ export function DashboardPage() {
 
       <section>
         <div className="row">
-          <h2>내 팀</h2>
+          <h2>{t("dashboard.myTeams")}</h2>
           <button onClick={() => setShowTeamForm((v) => !v)}>
-            {showTeamForm ? "취소" : "+ 새 팀"}
+            {showTeamForm ? t("common.cancel") : t("dashboard.newTeam")}
           </button>
         </div>
 
         {showTeamForm && (
           <form onSubmit={handleCreateTeam} className="card stack">
             <div className="field">
-              <label>팀 이름</label>
+              <label>{t("dashboard.teamNameLabel")}</label>
               <input value={teamName} onChange={(e) => setTeamName(e.target.value)} required />
             </div>
             <div className="field">
-              <label>타임존 (IANA)</label>
-              <input value={teamTimezone} onChange={(e) => setTeamTimezone(e.target.value)} required />
+              <label>{t("dashboard.timezoneLabel")}</label>
+              <select value={teamTimezone} onChange={(e) => setTeamTimezone(e.target.value)} required>
+                {timezoneOptions.map((tz) => (
+                  <option key={tz} value={tz}>
+                    {tz}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="field">
-              <label>국가 (선택)</label>
-              <input value={teamCountry} onChange={(e) => setTeamCountry(e.target.value)} />
+              <label>{t("dashboard.countryLabel")}</label>
+              <select value={teamCountry} onChange={(e) => setTeamCountry(e.target.value)}>
+                <option value="">{t("common.none")}</option>
+                {COUNTRY_CODES.map((code) => (
+                  <option key={code} value={code}>
+                    {countryLabel(code, lang)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="row">
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t("team.workStart")}</label>
+                <input
+                  type="time"
+                  value={teamWorkStart}
+                  onChange={(e) => setTeamWorkStart(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label>{t("team.workEnd")}</label>
+                <input
+                  type="time"
+                  value={teamWorkEnd}
+                  onChange={(e) => setTeamWorkEnd(e.target.value)}
+                  required
+                />
+              </div>
             </div>
             <div className="field">
-              <label>기본 언어</label>
+              <label>{t("dashboard.defaultLanguageLabel")}</label>
               <select value={teamLanguage} onChange={(e) => setTeamLanguage(e.target.value as "ko" | "en")}>
-                <option value="ko">한국어</option>
-                <option value="en">English</option>
+                <option value="ko">{t("common.korean")}</option>
+                <option value="en">{t("common.english")}</option>
               </select>
             </div>
             <button type="submit" className="primary">
-              생성
+              {t("common.create")}
             </button>
           </form>
         )}
 
         {teams === null ? (
-          <div className="spinner">불러오는 중...</div>
+          <div className="spinner">{t("common.loading")}</div>
         ) : teams.length === 0 ? (
-          <div className="empty-state">아직 소속된 팀이 없습니다.</div>
+          <div className="empty-state">{t("dashboard.noTeams")}</div>
         ) : (
-          <div className="list-panel">
-            {teams.map((t) => (
-              <Link key={t.id} to={`/teams/${t.id}`} className="list-row">
-                <span className="list-row-icon">{t.name.slice(0, 1)}</span>
-                <span className="list-row-main">
-                  <span className="name">{t.name}</span>
-                  <span className="sub">
-                    {t.timezone} · {t.work_start}–{t.work_end}
-                  </span>
+          <div className="entity-grid">
+            {teams.map((t2) => (
+              <Link key={t2.id} to={`/teams/${t2.id}`} className="entity-card">
+                <span className="entity-card-icon">{t2.name.slice(0, 1)}</span>
+                <span className="entity-card-name">{t2.name}</span>
+                <span className="entity-card-sub">
+                  {t2.timezone} · {t2.work_start}–{t2.work_end}
                 </span>
-                <span className="list-row-end">
-                  <span className={`badge ${t.role === "leader" ? "accent" : "muted"}`}>
-                    {t.role === "leader" ? "리더" : "멤버"}
+                <span className="entity-card-footer">
+                  <span className={`badge ${t2.role === "leader" ? "accent" : "muted"}`}>
+                    {t2.role === "leader" ? t("common.leader") : t("common.member")}
                   </span>
                 </span>
               </Link>
@@ -154,57 +227,51 @@ export function DashboardPage() {
 
       <section style={{ marginTop: 32 }}>
         <div className="row">
-          <h2>내 프로젝트</h2>
+          <h2>{t("dashboard.myProjects")}</h2>
           <button onClick={() => setShowProjectForm((v) => !v)}>
-            {showProjectForm ? "취소" : "+ 새 프로젝트"}
+            {showProjectForm ? t("common.cancel") : t("dashboard.newProject")}
           </button>
         </div>
 
         {showProjectForm && (
           <form onSubmit={handleCreateProject} className="card stack">
             <div className="field">
-              <label>프로젝트 이름</label>
+              <label>{t("dashboard.projectNameLabel")}</label>
               <input value={projectName} onChange={(e) => setProjectName(e.target.value)} required />
             </div>
             <div className="field">
-              <label>소속 팀</label>
-              <select value={projectTeamId} onChange={(e) => setProjectTeamId(e.target.value)} required>
-                <option value="" disabled>
-                  팀을 선택하세요
-                </option>
-                {teams?.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
+              <label>{t("dashboard.teamSelectLabel")}</label>
+              <select value={projectTeamId} onChange={(e) => setProjectTeamId(e.target.value)}>
+                <option value="">{t("dashboard.teamSelectSkip")}</option>
+                {teams?.map((t2) => (
+                  <option key={t2.id} value={t2.id}>
+                    {t2.name}
                   </option>
                 ))}
               </select>
+              <p className="quick-action-meta">{t("dashboard.teamSelectSkipHint")}</p>
             </div>
             <button type="submit" className="primary">
-              생성
+              {t("common.create")}
             </button>
           </form>
         )}
 
         {projects === null ? (
-          <div className="spinner">불러오는 중...</div>
+          <div className="spinner">{t("common.loading")}</div>
         ) : projects.length === 0 ? (
-          <div className="empty-state">아직 참여 중인 프로젝트가 없습니다.</div>
+          <div className="empty-state">{t("dashboard.noProjects")}</div>
         ) : (
-          <div className="list-panel">
+          <div className="entity-grid">
             {projects.map((p) => (
-              <Link key={p.id} to={`/projects/${p.id}`} className="list-row">
-                <span className="list-row-icon">{p.name.slice(0, 1)}</span>
-                <span className="list-row-main">
-                  <span className="name">{p.name}</span>
-                  {p.repo_full_name && <span className="sub">{p.repo_full_name}</span>}
-                </span>
-                <span className="list-row-end">
-                  {p.repo_full_name ? (
-                    <span className="badge ok">GitHub 연결</span>
-                  ) : (
-                    <span className="badge muted">미연결</span>
-                  )}
-                </span>
+              <Link key={p.id} to={`/projects/${p.id}`} className="entity-card">
+                <span className="entity-card-icon">{p.name.slice(0, 1)}</span>
+                <span className="entity-card-name">{p.name}</span>
+                {p.is_admin && (
+                  <span className="entity-card-footer">
+                    <span className="badge accent">{t("dashboard.admin")}</span>
+                  </span>
+                )}
               </Link>
             ))}
           </div>

@@ -11,6 +11,9 @@ class BriefingItem(BaseModel):
     title: str
     url: str
     reason: str  # 예: "미응답 @멘션", "리뷰 요청", "파일 경로 겹침"
+    # AI가 채우는 한 줄 설명 (unanswered_items.why_it_matters). needs_my_response 항목만
+    # 해당되며, AI 파트 연동 전까지는 null.
+    why_it_matters: str | None = None
 
 
 class BriefingOut(BaseModel):

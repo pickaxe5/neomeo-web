@@ -111,12 +111,20 @@ def list_review_comments(client: httpx.Client, token: str, full_name: str, since
 def list_commits(client: httpx.Client, token: str, full_name: str, since: datetime, limit: int = 20) -> list[dict]:
     """G-005: 커밋은 노이즈가 커서 근거자료·담당 추론에만 쓰인다. API 사용량 절제를 위해
     최근 N개로 캡한다."""
-    return _get(
-        client,
-        token,
-        f"/repos/{full_name}/commits",
-        {"since": since.isoformat(), "per_page": limit},
-    ).json()
+    try:
+        return _get(
+            client,
+            token,
+            f"/repos/{full_name}/commits",
+            {"since": since.isoformat(), "per_page": limit},
+        ).json()
+    except GithubApiError as exc:
+        # GitHub은 커밋이 하나도 없는(생성 직후) 레포의 /commits 조회에 409를 준다.
+        # 이건 실패가 아니라 "커밋 0개"인 정상 상태이므로 에러를 올리지 않는다 — 그대로
+        # 두면 레포를 처음 연결한 시점에 늘 연결 실패로 보인다.
+        if exc.status_code == 409:
+            return []
+        raise
 
 
 def get_commit_files(client: httpx.Client, token: str, full_name: str, sha: str) -> list[str]:

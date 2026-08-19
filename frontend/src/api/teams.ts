@@ -4,6 +4,8 @@ import type {
   TeamCreate,
   TeamUpdate,
   TeamMemberOut,
+  MyAssignmentUpdate,
+  MemberRoleUpdate,
   InviteLinkOut,
   InviteAcceptResponse,
 } from "../types/api";
@@ -24,6 +26,13 @@ export function fetchTeamMembers(teamId: string) {
   return apiRequest<TeamMemberOut[]>(`/teams/${teamId}/members`);
 }
 
+export function updateMyAssignment(teamId: string, payload: MyAssignmentUpdate) {
+  return apiRequest<TeamMemberOut>(`/teams/${teamId}/members/me`, {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
 export function createInviteLink(teamId: string) {
   return apiRequest<InviteLinkOut>(`/teams/${teamId}/invite-links`, { method: "POST" });
 }
@@ -38,4 +47,15 @@ export function deleteTeam(teamId: string) {
 
 export function leaveTeam(teamId: string) {
   return apiRequest<void>(`/teams/${teamId}/leave`, { method: "POST" });
+}
+
+export function updateMemberRole(teamId: string, userId: string, payload: MemberRoleUpdate) {
+  return apiRequest<TeamMemberOut>(`/teams/${teamId}/members/${userId}/role`, {
+    method: "PATCH",
+    body: payload,
+  });
+}
+
+export function removeMember(teamId: string, userId: string) {
+  return apiRequest<void>(`/teams/${teamId}/members/${userId}`, { method: "DELETE" });
 }
