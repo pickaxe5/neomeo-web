@@ -7,8 +7,9 @@ from app.core.i18n import get_lang, t
 from app.models.closure import ClosureRun
 from app.models.github_event import RawEvent
 from app.models.project import Project, ProjectAdmin, ProjectDocument, ProjectRepo, ProjectTeam
-from app.models.summary import SummaryCard
+from app.models.summary import PersonalProgressSummary, SummaryCard
 from app.models.team import Team
+from app.models.unanswered import UnansweredItem
 from app.models.user import User
 from app.schemas.project import (
     AddParticipatingTeamRequest,
@@ -280,8 +281,12 @@ def delete_project(
         db.query(SummaryCard).filter(SummaryCard.closure_run_id.in_(closure_run_ids)).delete(
             synchronize_session=False
         )
+        db.query(PersonalProgressSummary).filter(
+            PersonalProgressSummary.closure_run_id.in_(closure_run_ids)
+        ).delete(synchronize_session=False)
         db.query(ClosureRun).filter(ClosureRun.project_id == project_id).delete(synchronize_session=False)
 
+    db.query(UnansweredItem).filter(UnansweredItem.project_id == project_id).delete(synchronize_session=False)
     db.query(RawEvent).filter(RawEvent.project_id == project_id).delete(synchronize_session=False)
     db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).delete(synchronize_session=False)
     db.query(ProjectAdmin).filter(ProjectAdmin.project_id == project_id).delete(synchronize_session=False)
