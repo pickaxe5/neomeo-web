@@ -78,14 +78,30 @@ def build_closure_run(
             )
         db.add(card)
 
-    members = db.query(TeamMembership).filter(TeamMembership.team_id == team.id).all()
-    for membership in members:
+    # neomeo-ai의 personal_progress_context_builder.py 계약: 카드를 만든 팀이 아니라
+    # "이 프로젝트에 참여 중인 모든 팀원" 각자의 소속 팀 언어로 row를 만들어야 한다.
+    # 다른 팀 카드도 자기 언어로 개인화해서 볼 수 있게 하기 위함 (S-005).
+    project_members = (
+        db.query(TeamMembership)
+        .join(ProjectTeam, ProjectTeam.team_id == TeamMembership.team_id)
+        .filter(ProjectTeam.project_id == project.id)
+        .all()
+    )
+    seen_user_ids: set = set()
+    for membership in project_members:
+        # 한 사용자가 이 프로젝트에 참여 중인 팀을 둘 이상 두면(예외적) 같은 (closure_run_id,
+        # user_id) row가 중복 생성되어 unique 제약 위반이 난다. 먼저 매칭된 팀 소속만 쓴다.
+        if membership.user_id in seen_user_ids:
+            continue
+        seen_user_ids.add(membership.user_id)
+        member_team = db.get(Team, membership.team_id)
+        language = member_team.default_language if member_team else "ko"
         db.add(
             PersonalProgressSummary(
                 closure_run_id=closure_run.id,
                 user_id=membership.user_id,
-                language=team.default_language,
-                content=None if has_events else NO_CHANGE_TEXT.get(team.default_language, NO_CHANGE_TEXT["en"]),
+                language=language,
+                content=None if has_events else NO_CHANGE_TEXT.get(language, NO_CHANGE_TEXT["en"]),
             )
         )
 
