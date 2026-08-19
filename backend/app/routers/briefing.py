@@ -10,7 +10,7 @@ from app.models.project import Project
 from app.models.unanswered import UnansweredItem
 from app.models.user import User
 from app.schemas.briefing import BriefingOut, ResolveUnansweredItemRequest
-from app.services.briefing_service import build_briefing
+from app.services.briefing_service import ack_briefing_viewed, build_briefing
 
 router = APIRouter(prefix="/projects/{project_id}", tags=["briefing"])
 
@@ -24,12 +24,29 @@ def get_briefing(
 ) -> BriefingOut:
     """기능명세서 7.1: 업무 시작 브리핑, 열람 시점 온디맨드 생성. 1단계(답해야 할 것)는
     미응답 항목(3.3), 2단계(내 작업과 맞물린 변경)는 담당 영역(4.2)을 근거로 조립한다.
-    3단계(팀 진행 상황)는 AI가 채우는 summary_cards.content를 참조만 하므로, AI 파트
-    연동 전까지는 None으로 내려간다 — 그 부분만 아직 AI 연동 대기 상태다."""
+    3단계(팀 진행 상황)는 마지막 ack(POST .../briefing/ack) 이후 마감된 카드 전체를
+    보여준다. 조회는 조회일 뿐 읽음 처리를 하지 않는다 — 그냥 화면을 왔다갔다만 해도
+    재조회로 내용이 사라지는 걸 막기 위함이다."""
     project = db.get(Project, project_id)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
     return build_briefing(db, project, current_user)
+
+
+@router.post("/briefing/ack", status_code=status.HTTP_204_NO_CONTENT)
+def ack_briefing(
+    project_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    lang: str = Depends(get_lang),
+) -> None:
+    """사용자가 브리핑을 확인했다고 명시적으로 알린다. 이 시점 이후가 다음 브리핑의
+    since 기준이 된다 — FE가 "확인함" 액션에서 호출한다. 아직 호출하는 곳이 없어도
+    문제 없다: 안 부르면 계속 마지막 ack(또는 최초 진입) 이후 전체를 보여줄 뿐이다."""
+    if db.get(Project, project_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
+    ack_briefing_viewed(db, current_user)
+    return None
 
 
 @router.patch("/unanswered-items/{item_id}/resolve", status_code=status.HTTP_204_NO_CONTENT)
