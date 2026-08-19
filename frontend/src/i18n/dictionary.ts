@@ -295,6 +295,21 @@ export const dictionary: Record<Lang, Record<string, string>> = {
     "landing.feature6Title": "3단계 온보딩",
     "landing.feature6Desc": "팀 만들기 → 프로젝트 연결 → 팀원 초대. 타임존은 자동 감지됩니다.",
 
+    "landing.navRoadmap": "다음 단계",
+    "landing.roadmapEyebrow": "다음 단계",
+    "landing.roadmapTitle1": "GitHub을 넘어,",
+    "landing.roadmapTitle2": "하나의 워크스페이스로",
+    "landing.roadmapSub":
+      "지금은 GitHub으로 시작하지만, 팀이 흩어져 쓰는 모든 툴을 하나의 브리핑으로 모으는 것이 목표입니다",
+    "landing.roadmapBadge": "준비 중",
+    "landing.roadmapItem1Title": "Notion 연동",
+    "landing.roadmapItem1Desc": "기획 문서와 태스크 변경 사항도 자동으로 감지해 브리핑에 함께 담습니다.",
+    "landing.roadmapItem2Title": "Slack · Jira 연동",
+    "landing.roadmapItem2Desc": "코드 밖에서 오가는 논의와 이슈 트래킹까지 하나의 타임라인 위에 올립니다.",
+    "landing.roadmapItem3Title": "통합 브리핑",
+    "landing.roadmapItem3Desc":
+      "여러 툴에 흩어진 활동을 매번 따로 확인할 필요 없이, 아침 브리핑 하나로 모아 봅니다.",
+
     "landing.howTitle1": "3분 온보딩으로",
     "landing.howTitle2": "바로 시작합니다",
     "landing.howSub": "복잡한 설정 없이, 팀원 초대부터 첫 브리핑까지 단 3단계",
@@ -611,6 +626,21 @@ export const dictionary: Record<Lang, Record<string, string>> = {
     "landing.feature5Desc": "PRs, issues, and review comments are collected automatically, backfilling the last 3 days on connect.",
     "landing.feature6Title": "3-step onboarding",
     "landing.feature6Desc": "Create a team → connect a project → invite teammates. Timezone is detected automatically.",
+
+    "landing.navRoadmap": "Roadmap",
+    "landing.roadmapEyebrow": "What's next",
+    "landing.roadmapTitle1": "Beyond GitHub,",
+    "landing.roadmapTitle2": "toward one workspace",
+    "landing.roadmapSub":
+      "We're starting with GitHub, but the goal is to bring every tool your team scatters across into a single briefing",
+    "landing.roadmapBadge": "Coming soon",
+    "landing.roadmapItem1Title": "Notion integration",
+    "landing.roadmapItem1Desc": "Planning docs and task changes are picked up automatically and folded into your briefing.",
+    "landing.roadmapItem2Title": "Slack & Jira integration",
+    "landing.roadmapItem2Desc": "Discussions and issue tracking that happen outside your code land on the same timeline.",
+    "landing.roadmapItem3Title": "One unified briefing",
+    "landing.roadmapItem3Desc":
+      "Stop checking each tool separately — everything scattered across your stack arrives in a single morning briefing.",
 
     "landing.howTitle1": "Start right away with",
     "landing.howTitle2": "3-minute onboarding",
