@@ -1,7 +1,8 @@
 """기능명세서 7.1: 업무 시작 브리핑. 3단 우선순위(답해야 할 것 → 내 작업과 맞물린 변경 →
 팀 진행 상황) 중 1·2단계는 구조화 사실 데이터(0층)와 미응답 항목(3.3)·담당 영역(4.2)만
-있으면 AI 없이도 조립할 수 있다. 3단계(팀 진행 상황)는 AI가 생성하는 summary_cards.content를
-그대로 참조만 하며, 아직 채워지지 않았으면(AI 파트 미연동) None으로 둔다."""
+있으면 AI 없이도 조립할 수 있다. 3단계(팀 진행 상황)는 개인화 서술(personal_progress_summaries)이
+있으면 우선 쓰고, 아직 AI가 안 채웠으면(NULL) 팀 공통 카드(summary_cards.content)로 폴백한다 —
+타임라인이 보여주는 팀 공통 카드와 달리, 브리핑은 "나에게" 어떤 의미였는지를 보여주는 게 목표다."""
 
 from datetime import datetime, timezone
 
@@ -10,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.models.closure import ClosureRun
 from app.models.github_event import EventType, RawEvent
 from app.models.project import Project, ProjectTeam
-from app.models.summary import SummaryCard
+from app.models.summary import PersonalProgressSummary, SummaryCard
 from app.models.team import Team, TeamMembership
 from app.models.unanswered import UnansweredItem
 from app.models.user import User
@@ -94,8 +95,10 @@ def _affects_my_work(db: Session, project_id, since: datetime, user: User) -> li
 
 
 def _team_progress_summary(db: Session, project_id, user: User) -> str | None:
-    """가장 최근 마감 카드의 내용을 참고용으로 보여준다. AI가 아직 content를 채우지
-    않았으면(NULL) 이 단계는 자연스럽게 비어 있는 채로 반환된다."""
+    """본인이 속한 팀 자신의 가장 최근 마감을 기준으로, 개인화된 서술(personal_progress_summaries)이
+    있으면 그걸 먼저 보여주고, 아직 AI가 안 채웠으면 팀 공통 카드(summary_cards)로 폴백한다.
+    팀 필터가 없으면 프로젝트 내 다른 팀의 카드가 섞여 나와 타임라인과 구분이 안 되므로,
+    반드시 closure_run의 team_id로 좁혀야 한다."""
     membership = (
         db.query(TeamMembership)
         .join(ProjectTeam, ProjectTeam.team_id == TeamMembership.team_id)
@@ -108,13 +111,31 @@ def _team_progress_summary(db: Session, project_id, user: User) -> str | None:
     language = team.default_language if team else "ko"
 
     row = (
-        db.query(SummaryCard)
+        db.query(SummaryCard, ClosureRun)
         .join(ClosureRun, ClosureRun.id == SummaryCard.closure_run_id)
-        .filter(ClosureRun.project_id == project_id, SummaryCard.language == language)
+        .filter(
+            ClosureRun.project_id == project_id,
+            ClosureRun.team_id == membership.team_id,
+            SummaryCard.language == language,
+        )
         .order_by(ClosureRun.range_end.desc())
         .first()
     )
-    return row.content if row else None
+    if row is None:
+        return None
+    card, closure_run = row
+
+    personal = (
+        db.query(PersonalProgressSummary)
+        .filter(
+            PersonalProgressSummary.closure_run_id == closure_run.id,
+            PersonalProgressSummary.user_id == user.id,
+        )
+        .first()
+    )
+    if personal and personal.content:
+        return personal.content
+    return card.content
 
 
 def build_briefing(db: Session, project: Project, user: User) -> BriefingOut:
