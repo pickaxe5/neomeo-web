@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from app.models.closure import ClosureRun, ClosureTrigger
 from app.models.github_event import RawEvent
 from app.models.project import Project, ProjectTeam
-from app.models.summary import CardStatus, SummaryCard
-from app.models.team import Team
+from app.models.summary import CardStatus, PersonalProgressSummary, SummaryCard
+from app.models.team import Team, TeamMembership
 
 NO_CHANGE_TEXT = {"ko": "변동 없음", "en": "No changes"}
 
@@ -77,6 +77,17 @@ def build_closure_run(
                 status=CardStatus.NO_CHANGE,
             )
         db.add(card)
+
+    members = db.query(TeamMembership).filter(TeamMembership.team_id == team.id).all()
+    for membership in members:
+        db.add(
+            PersonalProgressSummary(
+                closure_run_id=closure_run.id,
+                user_id=membership.user_id,
+                language=team.default_language,
+                content=None if has_events else NO_CHANGE_TEXT.get(team.default_language, NO_CHANGE_TEXT["en"]),
+            )
+        )
 
     db.flush()
     return closure_run
