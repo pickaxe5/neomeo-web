@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../i18n/LanguageContext";
 import { fetchMyTeams, fetchMyProjects } from "../api/me";
@@ -20,10 +20,10 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand">
+      <Link to="/" className="sidebar-brand">
         <span className="sidebar-brand-ko">너머</span>
         <span className="sidebar-brand-en">NEOMEO</span>
-      </div>
+      </Link>
 
       <nav className="sidebar-nav">
         <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
