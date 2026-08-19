@@ -1,7 +1,8 @@
 import { useState } from "react";
-import type { BriefingItem, BriefingOut } from "../types/api";
+import type { BriefingItem, BriefingOut, ParticipatingTeamOut } from "../types/api";
 import { resolveUnansweredItem } from "../api/briefing";
 import { errorMessage } from "./ErrorBanner";
+import { formatRange } from "./TimelineCard";
 import { useLanguage } from "../i18n/LanguageContext";
 
 function NeedsResponseRow({
@@ -60,9 +61,18 @@ function InfoRow({ item }: { item: BriefingItem }) {
   );
 }
 
-export function BriefingPanel({ briefing, projectId }: { briefing: BriefingOut; projectId: string }) {
+export function BriefingPanel({
+  briefing,
+  projectId,
+  teams,
+}: {
+  briefing: BriefingOut;
+  projectId: string;
+  teams: ParticipatingTeamOut[];
+}) {
   const { t } = useLanguage();
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set());
+  const teamName = (teamId: string) => teams.find((team) => team.id === teamId)?.name ?? teamId;
 
   function handleToggled(id: string, resolved: boolean) {
     setResolvedIds((prev) => {
@@ -76,7 +86,7 @@ export function BriefingPanel({ briefing, projectId }: { briefing: BriefingOut; 
   const isEmpty =
     briefing.needs_my_response.length === 0 &&
     briefing.affects_my_work.length === 0 &&
-    !briefing.team_progress_summary;
+    briefing.team_progress_summary.length === 0;
 
   if (isEmpty) {
     return (
@@ -120,10 +130,22 @@ export function BriefingPanel({ briefing, projectId }: { briefing: BriefingOut; 
           </div>
         </div>
       )}
-      {briefing.team_progress_summary && (
+      {briefing.team_progress_summary.length > 0 && (
         <div className="card">
           <h3>{t("briefing.teamProgress")}</h3>
-          <p>{briefing.team_progress_summary}</p>
+          <div className="briefing-list">
+            {briefing.team_progress_summary.map((card, i) => (
+              <div key={`${card.team_id}-${card.range_end}-${i}`} className="briefing-item">
+                <div className="row">
+                  <strong>{teamName(card.team_id)}</strong>
+                  <span className="reason">{formatRange(card.range_start, card.range_end)}</span>
+                </div>
+                <p className="reason" style={card.content ? undefined : { opacity: 0.6 }}>
+                  {card.content ?? t("timeline.cardGenerating")}
+                </p>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

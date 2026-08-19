@@ -154,6 +154,7 @@ function TimelineTab({ projectId }: { projectId: string }) {
 function BriefingTab({ projectId }: { projectId: string }) {
   const { t } = useLanguage();
   const [briefing, setBriefing] = useState<BriefingOut | null>(null);
+  const [teams, setTeams] = useState<ParticipatingTeamOut[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -161,12 +162,13 @@ function BriefingTab({ projectId }: { projectId: string }) {
     fetchBriefing(projectId)
       .then(setBriefing)
       .catch((err) => setError(errorMessage(err)));
+    fetchParticipatingTeams(projectId).then(setTeams).catch(() => {});
   }, [projectId]);
 
   if (error) return <ErrorBanner message={error} />;
   if (!briefing) return <div className="spinner">{t("common.loading")}</div>;
 
-  return <BriefingPanel briefing={briefing} projectId={projectId} />;
+  return <BriefingPanel briefing={briefing} projectId={projectId} teams={teams} />;
 }
 
 function SettingsTab({
