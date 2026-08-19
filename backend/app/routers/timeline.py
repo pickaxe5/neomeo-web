@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
@@ -11,7 +13,10 @@ from app.models.summary import SummaryCard
 from app.models.team import Team
 from app.models.user import User
 from app.schemas.timeline import ClosureTriggerRequest, TimelineCardOut, TimelineSourceEvent
+from app.services import github_collector
 from app.services.closure_service import run_closure
+
+logger = logging.getLogger("neomeo.timeline")
 
 router = APIRouter(prefix="/projects/{project_id}", tags=["timeline"])
 
@@ -95,7 +100,12 @@ def trigger_manual_closure(
     current_user: User = Depends(get_current_user),
     lang: str = Depends(get_lang),
 ) -> TimelineCardOut:
-    """S-002: 야근·조기 작업 시 팀장이 추가 작업 마감을 버튼으로 실행한다. 하루 여러 번 가능."""
+    """S-002: 야근·조기 작업 시 팀장이 추가 작업 마감을 버튼으로 실행한다. 하루 여러 번 가능.
+
+    자동 마감(should_auto_close)은 10분 폴링 워커가 수집 직후 같은 사이클에서 판단하므로
+    항상 최신 상태를 본다. 수동 마감은 사용자가 임의 시점에 누르므로, 마감 직전 GitHub를
+    한 번 더 동기 수집해 직전 폴링 이후의 활동을 놓치지 않게 한다 — 이게 없으면 방금 push한
+    커밋이 아직 폴링 전이라 '변동 없음'으로 잘못 굳어버릴 수 있다."""
     project = db.get(Project, project_id)
     if project is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, t("project_not_found", lang))
@@ -103,6 +113,11 @@ def trigger_manual_closure(
     if team is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, t("team_not_found", lang))
     require_team_leader(db, payload.team_id, current_user, lang)
+
+    try:
+        github_collector.collect_project_events(db, project)
+    except github_collector.CollectionError as exc:
+        logger.warning("수동 마감 직전 GitHub 수집 실패 (project=%s): %s", project.id, exc)
 
     closure_run = run_closure(db, project, team, ClosureTrigger.MANUAL)
 
