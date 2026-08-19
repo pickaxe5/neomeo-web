@@ -20,8 +20,11 @@ function App() {
   // "/" always manages its own full-page chrome (LandingPage for guests,
   // AppShell for members) — the shared public Navbar/sky wrapper below is
   // only for the smaller public utility pages (login, oauth, invites).
+  // "/welcome" always shows the marketing LandingPage regardless of login
+  // state, so the logo can send logged-in users back to the very first screen.
   const isSelfContained =
     location.pathname === "/" ||
+    location.pathname === "/welcome" ||
     (isAuthenticated && (location.pathname.startsWith("/projects") || location.pathname.startsWith("/teams")));
 
   const routes = (
@@ -29,6 +32,7 @@ function App() {
       <Route path="/" element={isAuthenticated ? <AppShell /> : <LandingPage />}>
         <Route index element={<DashboardPage />} />
       </Route>
+      <Route path="/welcome" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
       <Route path="/invite/:token" element={<InviteAcceptPage />} />
