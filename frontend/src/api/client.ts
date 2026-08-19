@@ -38,6 +38,7 @@ async function refreshAccessToken(): Promise<string | null> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh_token: refreshToken }),
+      cache: "no-store",
     })
       .then(async (res) => {
         if (!res.ok) {
@@ -88,6 +89,7 @@ async function rawRequest(path: string, options: RequestOptions, accessToken: st
     method: options.method ?? "GET",
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    cache: "no-store",
   });
 }
 
@@ -136,7 +138,7 @@ async function rawUpload(path: string, formData: FormData, accessToken: string |
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
   }
-  return fetch(buildUrl(path), { method: "POST", headers, body: formData });
+  return fetch(buildUrl(path), { method: "POST", headers, body: formData, cache: "no-store" });
 }
 
 export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
