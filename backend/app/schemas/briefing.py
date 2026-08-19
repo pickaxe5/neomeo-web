@@ -16,17 +16,29 @@ class BriefingItem(BaseModel):
     why_it_matters: str | None = None
 
 
+class TeamProgressCard(BaseModel):
+    """3단계 한 건 = 마감(closure_run) 하나. 카드를 만든 팀과 보는 사람의 팀이 다를 수
+    있다(S-005, 다른 팀 카드도 자기 언어로 본다). content는 이 사용자용 개인화 내용이
+    있으면 그걸, 없으면 팀 공통 카드로 폴백 — AI가 아직 안 채웠으면 null."""
+
+    team_id: uuid.UUID
+    range_start: datetime
+    range_end: datetime
+    content: str | None = None
+
+
 class BriefingOut(BaseModel):
     """기능명세서 7.1: 3단 우선순위(내가 답해야 할 것 / 내 작업 영향 변경 / 팀 진행 상황).
-    1·2단계는 0층 데이터에서 직접 조립되고, 3단계는 AI가 채우는 summary_cards.content를
-    참조한다 — AI 파트 연동 전까지는 null."""
+    1·2단계는 0층 데이터에서 직접 조립된다. 3단계는 마지막으로 브리핑을 본 이후
+    (last_briefing_viewed_at) 마감된 모든 팀의 카드를 시간순으로 담는다 — "자는 동안 다른
+    팀이 한 일을 아침에 전부 본다"는 기획 의도상, 가장 최근 것 하나만 보여주면 안 된다."""
 
     project_id: uuid.UUID
     user_id: uuid.UUID
     generated_at: datetime
     needs_my_response: list[BriefingItem] = []
     affects_my_work: list[BriefingItem] = []
-    team_progress_summary: str | None = None
+    team_progress_summary: list[TeamProgressCard] = []
 
 
 class ResolveUnansweredItemRequest(BaseModel):
