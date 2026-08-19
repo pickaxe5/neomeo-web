@@ -115,6 +115,18 @@ def update_project(
     )
 
 
+@router.get("/{project_id}/document", response_model=ProjectDocumentOut)
+def get_project_document(project_id: str, db: Session = Depends(get_db)) -> ProjectDocument:
+    """저장된 기획 문서를 조회한다. 저장 후 재조회로 저장 여부를 확인할 수 있게 한다."""
+    if db.get(Project, project_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "프로젝트를 찾을 수 없습니다.")
+
+    doc = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).first()
+    if doc is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "저장된 기획 문서가 없습니다.")
+    return doc
+
+
 @router.put("/{project_id}/document", response_model=ProjectDocumentOut)
 def upsert_project_document(
     project_id: str,

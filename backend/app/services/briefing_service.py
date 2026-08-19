@@ -94,8 +94,10 @@ def _affects_my_work(db: Session, project_id, since: datetime, user: User) -> li
 
 
 def _team_progress_summary(db: Session, project_id, user: User) -> str | None:
-    """가장 최근 마감 카드의 내용을 참고용으로 보여준다. AI가 아직 content를 채우지
-    않았으면(NULL) 이 단계는 자연스럽게 비어 있는 채로 반환된다."""
+    """본인이 속한 팀 자신의 가장 최근 마감 카드 내용을 보여준다. 팀 필터가 없으면
+    프로젝트 내 다른 팀의 카드가 섞여 나와 타임라인과 구분이 안 되므로, 반드시
+    closure_run의 team_id로 좁혀야 한다. AI가 아직 content를 채우지 않았으면(NULL)
+    이 단계는 자연스럽게 비어 있는 채로 반환된다."""
     membership = (
         db.query(TeamMembership)
         .join(ProjectTeam, ProjectTeam.team_id == TeamMembership.team_id)
@@ -110,7 +112,11 @@ def _team_progress_summary(db: Session, project_id, user: User) -> str | None:
     row = (
         db.query(SummaryCard)
         .join(ClosureRun, ClosureRun.id == SummaryCard.closure_run_id)
-        .filter(ClosureRun.project_id == project_id, SummaryCard.language == language)
+        .filter(
+            ClosureRun.project_id == project_id,
+            ClosureRun.team_id == membership.team_id,
+            SummaryCard.language == language,
+        )
         .order_by(ClosureRun.range_end.desc())
         .first()
     )
