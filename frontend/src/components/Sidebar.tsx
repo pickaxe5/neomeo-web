@@ -20,7 +20,7 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar">
-      <Link to="/" className="sidebar-brand">
+      <Link to="/welcome" className="sidebar-brand">
         <span className="sidebar-brand-ko">너머</span>
         <span className="sidebar-brand-en">NEOMEO</span>
       </Link>
