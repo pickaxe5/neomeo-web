@@ -18,7 +18,7 @@ from app.models.unanswered import UnansweredItem, UnansweredSignal
 from app.models.user import User
 
 _THREAD_NUMBER_RE = re.compile(r"/(?:pull|issues)/(\d+)")
-_MENTION_RE = re.compile(r"@([A-Za-z0-9-]+)")
+_MENTION_RE = re.compile(r"@([A-Za-z0-9_-]+)")
 
 
 def _thread_key(event: RawEvent) -> str | None:
