@@ -29,3 +29,20 @@ class SummaryCard(Base):
     status: Mapped[CardStatus] = mapped_column(Enum(CardStatus), default=CardStatus.NORMAL)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PersonalProgressSummary(Base):
+    """1층 개인화: SummaryCard(팀 공통 카드)와 별개로, 사용자별 관점의 마감 요약.
+    AI가 아직 채우지 않았으면(NULL) 브리핑은 팀 공통 카드로 폴백한다 (무손실)."""
+
+    __tablename__ = "personal_progress_summaries"
+    __table_args__ = (UniqueConstraint("closure_run_id", "user_id", name="uq_personal_progress_summary"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    closure_run_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("closure_runs.id"), index=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), index=True)
+
+    language: Mapped[str] = mapped_column(String(8))
+    content: Mapped[str | None] = mapped_column(Text, nullable=True)  # AI 생성 전에는 NULL
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
