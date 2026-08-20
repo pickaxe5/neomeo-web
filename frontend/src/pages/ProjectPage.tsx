@@ -29,6 +29,11 @@ import { ErrorBanner, errorMessage } from "../components/ErrorBanner";
 import { TimelineCard } from "../components/TimelineCard";
 import { BriefingPanel } from "../components/BriefingPanel";
 import { TeamStatusBar } from "../components/TeamStatusBar";
+import {
+  DEMO_OVERRIDE_BRIEFING,
+  DEMO_OVERRIDE_PROJECT_ID,
+  DEMO_OVERRIDE_TEAMS,
+} from "../demoBriefingOverride";
 
 type Tab = "timeline" | "briefing" | "settings";
 
@@ -158,12 +163,17 @@ function BriefingTab({ projectId }: { projectId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (projectId === DEMO_OVERRIDE_PROJECT_ID) return;
     setError(null);
     fetchBriefing(projectId)
       .then(setBriefing)
       .catch((err) => setError(errorMessage(err)));
     fetchParticipatingTeams(projectId).then(setTeams).catch(() => {});
   }, [projectId]);
+
+  if (projectId === DEMO_OVERRIDE_PROJECT_ID) {
+    return <BriefingPanel briefing={DEMO_OVERRIDE_BRIEFING} projectId={projectId} teams={DEMO_OVERRIDE_TEAMS} />;
+  }
 
   if (error) return <ErrorBanner message={error} />;
   if (!briefing) return <div className="spinner">{t("common.loading")}</div>;
